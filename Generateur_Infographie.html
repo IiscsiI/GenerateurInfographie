@@ -1041,7 +1041,7 @@
 		
 		<div style="text-align: center; margin-top: 20px;">
 			<p><strong>Contact licence commerciale :</strong><br>
-			📧 [pe.guillemin@mairie-tarbes]<br>
+			📧 [aaaa@bbb.ccc]<br>
 			🌐 [A venir]</p>
 		</div>
 
@@ -3425,7 +3425,7 @@ ${cssCustomization.includeReset ? `
 				Licence commerciale requise pour usage en entreprise.
 				
 				Source : [A venir]
-				Licence : [pe.guillemin@mairie-tarbes]
+				Licence : [aaaa@bbb.ccc]
 			-->
 			<html lang="fr">
 			<head>
@@ -4294,38 +4294,122 @@ ${cssCustomization.includeReset ? `
 			showNotification('Aperçu d\'impression généré avec mise en page optimisée', 'success');
 		}
 		
-		// Fonction d'impression optimisée pour tenir sur une seule page
+		// Fonction d'impression avec adaptation intelligente du contenu
 		function printOnSinglePage() {
 			const formatSelect = document.getElementById("print-format");
 			const selectedFormat = formatSelect.value;
 			
-			// Dimensions pour l'impression
-			const formatSizes = {
-				"A4-portrait": { width: 210, height: 297, cols: 1, name: "A4 Portrait" },
-				"A4-landscape": { width: 297, height: 210, cols: 2, name: "A4 Paysage" },
-				"A3-portrait": { width: 297, height: 420, cols: 2, name: "A3 Portrait" },
-				"A3-landscape": { width: 420, height: 297, cols: 3, name: "A3 Paysage" }
+			// Analyser le contenu pour déterminer la complexité
+			const stepCount = stepsData.length;
+			const totalActions = stepsData.reduce((sum, step) => sum + step.actions.length, 0);
+			const avgActionsPerStep = totalActions / stepCount;
+			const maxActionsPerStep = Math.max(...stepsData.map(step => step.actions.length));
+			const totalTextLength = stepsData.reduce((sum, step) => 
+				sum + step.actions.reduce((actionSum, action) => actionSum + action.text.length, 0), 0
+			);
+			const hasLongText = stepsData.some(step => 
+				step.actions.some(action => action.text.length > 150)
+			);
+			const hasImages = stepsData.some(step => 
+				step.actions.some(action => action.image)
+			);
+			
+			// Calculer le score de densité du contenu
+			const contentDensity = (totalTextLength / 1000) + (totalActions * 2) + (hasImages ? 10 : 0);
+			
+			// Configuration adaptative selon le format et le contenu
+			const formatConfigs = {
+				"A4-portrait": {
+					width: 210,
+					height: 297,
+					baseColumns: 1,
+					maxColumns: 2,
+					name: "A4 Portrait",
+					baseFontSize: 12,
+					minFontSize: 9,
+					actionMinFont: 8,
+					densityThreshold: 20
+				},
+				"A4-landscape": {
+					width: 297,
+					height: 210,
+					baseColumns: 2,
+					maxColumns: 3,
+					name: "A4 Paysage",
+					baseFontSize: 11,
+					minFontSize: 8,
+					actionMinFont: 7,
+					densityThreshold: 25
+				},
+				"A3-portrait": {
+					width: 297,
+					height: 420,
+					baseColumns: 2,
+					maxColumns: 4,
+					name: "A3 Portrait",
+					baseFontSize: 16,
+					minFontSize: 11,
+					actionMinFont: 10,
+					densityThreshold: 40
+				},
+				"A3-landscape": {
+					width: 420,
+					height: 297,
+					baseColumns: 3,
+					maxColumns: 5,
+					name: "A3 Paysage",
+					baseFontSize: 14,
+					minFontSize: 10,
+					actionMinFont: 9,
+					densityThreshold: 35
+				}
 			};
 			
-			const format = formatSizes[selectedFormat];
+			const config = formatConfigs[selectedFormat];
 			
-			// Calculer les dimensions optimales en fonction du nombre d'étapes
-			const stepCount = stepsData.length;
-			const rowsNeeded = Math.ceil(stepCount / format.cols);
+			// Adapter le nombre de colonnes selon la densité
+			let optimalColumns = config.baseColumns;
+			if (contentDensity > config.densityThreshold) {
+				optimalColumns = Math.min(
+					config.maxColumns,
+					Math.ceil(stepCount / Math.ceil(maxActionsPerStep / 3))
+				);
+			}
 			
-			// Ajuster la taille de police de base selon le nombre d'étapes
-			const baseFontSize = Math.min(14, Math.max(10, 16 - (stepCount / 3)));
+			// Calculer les dimensions
+			const pageWidthMM = config.width - 10;
+			const pageHeightMM = config.height - 10;
 			
-			// Créer une fenêtre de prévisualisation
+			// Hauteurs des sections (réduites pour plus d'espace)
+			const headerHeightMM = 20;
+			const timelineHeightMM = 10;
+			const emergencyHeightMM = 12;
+			const footerHeightMM = 15;
+			
+			const stepsHeightMM = pageHeightMM - headerHeightMM - timelineHeightMM - emergencyHeightMM - footerHeightMM;
+			const rowsNeeded = Math.ceil(stepCount / optimalColumns);
+			const stepHeightMM = (stepsHeightMM - (rowsNeeded - 1) * 3) / rowsNeeded;
+			
+			// Calculer la taille de police optimale
+			const densityFactor = Math.min(1, config.densityThreshold / contentDensity);
+			const fontSize = Math.max(
+				config.minFontSize,
+				config.baseFontSize * densityFactor
+			);
+			const actionFontSize = Math.max(
+				config.actionMinFont,
+				fontSize * 0.85
+			);
+			
+			// Créer la fenêtre
 			const previewWindow = window.open('', '_blank');
 			
-			// Récupérer toutes les données
+			// Récupérer les données
 			const mainTitle = document.getElementById('main-title').value;
 			const mainSubtitle = document.getElementById('main-subtitle').value;
 			const emergencyMessage = document.getElementById('emergency-message').value;
 			const footerMessage = document.getElementById('footer-message').value;
 			
-			// Couleurs
 			const headerColor = document.getElementById('header-color').value;
 			const timelineColor = document.getElementById('timeline-color').value;
 			const stepNumberColor = document.getElementById('step-number-color').value;
@@ -4334,12 +4418,12 @@ ${cssCustomization.includeReset ? `
 			const contentBgColor = document.getElementById('content-bg-color').value;
 			const stepBgColor = document.getElementById('step-bg-color').value;
 			
-			// Logo
 			const logoSrc = logoData.url || logoData.file;
+			const logoSize = Math.min(logoData.size, 60);
 			const logoHtml = logoSrc && logoData.position ? 
-				`<img src="${logoSrc}" class="logo ${logoData.position}" style="max-width: ${Math.min(logoData.size, 80)}px;">` : '';
+				`<img src="${logoSrc}" class="logo ${logoData.position}" style="max-width: ${logoSize}px;">` : '';
 			
-			// Générer le HTML optimisé pour une seule page
+			// HTML optimisé
 			const printHTML = `
 				<!DOCTYPE html>
 				<html lang="fr">
@@ -4348,8 +4432,8 @@ ${cssCustomization.includeReset ? `
 					<title>Impression - ${mainTitle}</title>
 					<style>
 						@page {
-							size: ${format.width}mm ${format.height}mm;
-							margin: 10mm;
+							size: ${config.width}mm ${config.height}mm;
+							margin: 5mm;
 						}
 						
 						* {
@@ -4358,49 +4442,57 @@ ${cssCustomization.includeReset ? `
 							box-sizing: border-box;
 						}
 						
-						body {
-							font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-							color: #2c3e50;
-							background: white;
-							font-size: ${baseFontSize}px;
-							line-height: 1.4;
+						html, body {
+							width: 100%;
 							height: 100vh;
 							overflow: hidden;
+							margin: 0;
+							padding: 0;
 						}
 						
-						/* Conteneur principal qui prend toute la page */
+						body {
+							font-family: 'Segoe UI', Arial, sans-serif;
+							color: #2c3e50;
+							background: white;
+							font-size: ${fontSize}px;
+							line-height: 1.3;
+						}
+						
+						/* Conteneur principal */
 						.page-container {
-							width: 100%;
+							width: 100vw;
 							height: 100vh;
 							display: flex;
 							flex-direction: column;
-							page-break-after: avoid;
-							page-break-inside: avoid;
-							padding: 0;
-							margin: 0;
+							overflow: hidden;
 						}
 						
-						/* Header - Réduit */
+						/* Header compact */
 						.header {
 							background: linear-gradient(135deg, ${headerColor}, ${adjustBrightness(headerColor, -20)});
 							color: white;
 							text-align: center;
-							padding: 10px;
+							padding: 8px 10px;
 							position: relative;
-							flex-shrink: 0;
+							flex: 0 0 ${headerHeightMM}mm;
+							display: flex;
+							flex-direction: column;
+							justify-content: center;
 						}
 						
 						.header h1 {
-							font-size: ${Math.min(2.2, Math.max(1.5, 2.5 - (stepCount / 10)))}em;
+							font-size: 2em;
 							font-weight: 900;
 							margin-bottom: 3px;
 							text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+							line-height: 1;
 						}
 						
 						.header p {
-							font-size: 0.85em;
+							font-size: 0.9em;
 							opacity: 0.95;
 							margin: 0;
+							line-height: 1.2;
 						}
 						
 						.logo {
@@ -4408,22 +4500,22 @@ ${cssCustomization.includeReset ? `
 							max-height: 50px;
 						}
 						
-						.logo.top-left { top: 10px; left: 10px; }
-						.logo.top-right { top: 10px; right: 10px; }
-						.logo.top-center { top: 10px; left: 50%; transform: translateX(-50%); }
-						.logo.bottom-left { bottom: 10px; left: 10px; }
-						.logo.bottom-right { bottom: 10px; right: 10px; }
-						.logo.bottom-center { bottom: 10px; left: 50%; transform: translateX(-50%); }
+						.logo.top-left { top: 5px; left: 10px; }
+						.logo.top-right { top: 5px; right: 10px; }
+						.logo.top-center { top: 5px; left: 50%; transform: translateX(-50%); }
+						.logo.bottom-left { bottom: 5px; left: 10px; }
+						.logo.bottom-right { bottom: 5px; right: 10px; }
+						.logo.bottom-center { bottom: 5px; left: 50%; transform: translateX(-50%); }
 						
-						/* Timeline - Compacte */
+						/* Timeline compacte */
 						.timeline {
 							display: flex;
 							justify-content: center;
 							align-items: center;
-							padding: 5px;
-							flex-shrink: 0;
+							padding: 4px;
+							flex: 0 0 ${timelineHeightMM}mm;
+							gap: 4px;
 							flex-wrap: wrap;
-							gap: 3px;
 						}
 						
 						.timeline-item {
@@ -4432,37 +4524,45 @@ ${cssCustomization.includeReset ? `
 							padding: 3px 10px;
 							border-radius: 15px;
 							font-weight: 700;
-							font-size: 0.75em;
+							font-size: 0.8em;
+							white-space: nowrap;
 						}
 						
 						.timeline-separator {
 							color: ${timelineColor};
-							padding: 0 3px;
-							font-size: 0.9em;
+							font-size: 1em;
 						}
 						
-						/* Steps Grid - Flexible pour remplir l'espace disponible */
-						.steps-grid {
-							display: grid;
-							grid-template-columns: repeat(${format.cols}, 1fr);
-							gap: 15px 10px;
-							padding: 20px 15px 15px 15px; /* Plus de padding en haut pour les numéros */
-							flex: 1;
+						/* Container des étapes */
+						.steps-container {
+							flex: 1 1 auto;
+							min-height: 0;
+							padding: 3px;
 							overflow: hidden;
-							align-content: stretch; /* Étirer le contenu */
-							align-items: stretch; /* Étirer les items */
 						}
 						
+						/* Grille adaptative */
+						.steps-grid {
+							width: 100%;
+							height: 100%;
+							display: grid;
+							grid-template-columns: repeat(${optimalColumns}, 1fr);
+							grid-auto-rows: 1fr;
+							gap: 3px;
+						}
+						
+						/* Étapes optimisées - FORCER l'affichage complet */
 						.step {
 							background: ${stepBgColor};
-							border-radius: 10px;
-							padding: 12px;
-							padding-top: 30px; /* Espace suffisant pour le numéro */
+							border-radius: 8px;
+							padding: 8px 6px;
+							padding-top: 25px;
 							border-left: 4px solid;
 							position: relative;
 							display: flex;
 							flex-direction: column;
-							min-height: 0; /* Important pour flexbox */
+							min-height: 0;
+							height: 100%;
 						}
 						
 						.step.immediate { border-left-color: ${classificationsData.critical.color}; }
@@ -4472,203 +4572,262 @@ ${cssCustomization.includeReset ? `
 						
 						.step-number {
 							position: absolute;
-							top: 5px; /* Position à l'intérieur pour éviter la coupure */
-							left: 10px;
+							top: 3px;
+							left: 6px;
 							background: ${stepNumberColor};
 							color: white;
-							width: 35px;
-							height: 35px;
+							width: 24px;
+							height: 24px;
 							border-radius: 50%;
 							display: flex;
 							align-items: center;
 							justify-content: center;
 							font-weight: 900;
-							font-size: 1em;
+							font-size: 0.9em;
 							z-index: 10;
-							box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 						}
 						
 						.step-icon {
-							font-size: ${Math.max(1.8, 2.8 - (stepCount / 8))}em;
-							margin-bottom: 5px;
+							font-size: 1.8em;
+							margin-bottom: 3px;
 							display: block;
-							flex-shrink: 0;
+							text-align: center;
+							flex: 0 0 auto;
+							line-height: 1;
 						}
 						
 						.step h3 {
-							font-size: 1.15em;
-							margin-bottom: 8px;
+							font-size: 1em;
+							margin-bottom: 4px;
 							color: #2c3e50;
 							font-weight: 800;
-							line-height: 1.1;
-							flex-shrink: 0;
+							line-height: 1;
+							text-align: center;
+							flex: 0 0 auto;
 						}
 						
+						/* Contenu avec gestion du débordement */
 						.step-content {
-							flex: 1;
+							flex: 1 1 auto;
+							min-height: 0;
 							overflow-y: auto;
 							overflow-x: hidden;
-							font-size: 0.9em;
+							font-size: ${actionFontSize}px;
+							display: flex;
+							flex-direction: column;
+							gap: 2px;
+							padding-right: 2px;
 						}
 						
-						/* Scrollbar personnalisée pour le contenu */
-						.step-content::-webkit-scrollbar {
-							width: 3px;
+						/* Scrollbar très fine */
+						@media screen {
+							.step-content {
+								scrollbar-width: thin;
+								scrollbar-color: rgba(0,0,0,0.2) transparent;
+							}
+							
+							.step-content::-webkit-scrollbar {
+								width: 2px;
+							}
+							
+							.step-content::-webkit-scrollbar-track {
+								background: transparent;
+							}
+							
+							.step-content::-webkit-scrollbar-thumb {
+								background: rgba(0,0,0,0.2);
+								border-radius: 2px;
+							}
 						}
 						
-						.step-content::-webkit-scrollbar-track {
-							background: rgba(0,0,0,0.1);
-							border-radius: 3px;
-						}
-						
-						.step-content::-webkit-scrollbar-thumb {
-							background: rgba(0,0,0,0.3);
-							border-radius: 3px;
-						}
-						
+						/* Actions ultra-compactes avec retour à la ligne forcé */
 						.action-item {
-							padding: 6px 8px;
-							border-radius: 5px;
-							margin: 4px 0;
-							border-left: 3px solid;
-							font-size: 0.9em;
-							line-height: 1.3;
+							padding: 4px 5px;
+							border-radius: 3px;
+							border-left: 2px solid;
+							font-size: ${Math.max(0.85, actionFontSize / fontSize)}em;
+							line-height: 1.2;
+							flex: 0 0 auto;
+							word-wrap: break-word !important;
+							overflow-wrap: break-word !important;
+							word-break: break-word !important;
+							hyphens: auto;
+							white-space: normal !important;
+							display: block;
 						}
 						
 						.action-item.critical {
 							border-left-color: ${classificationsData.critical.color};
-							background: ${hexToRgba(classificationsData.critical.color, 0.1)};
+							background: ${hexToRgba(classificationsData.critical.color, 0.08)};
 						}
 						
 						.action-item.important {
 							border-left-color: ${classificationsData.important.color};
-							background: ${hexToRgba(classificationsData.important.color, 0.1)};
+							background: ${hexToRgba(classificationsData.important.color, 0.08)};
 						}
 						
 						.action-item.info {
 							border-left-color: ${classificationsData.info.color};
-							background: ${hexToRgba(classificationsData.info.color, 0.1)};
+							background: ${hexToRgba(classificationsData.info.color, 0.08)};
 						}
 						
 						.action-item.success {
 							border-left-color: ${classificationsData.success.color};
-							background: ${hexToRgba(classificationsData.success.color, 0.1)};
+							background: ${hexToRgba(classificationsData.success.color, 0.08)};
 						}
 						
+						/* Gestion du texte */
+						.action-item strong {
+							font-weight: 700;
+						}
+						
+						.action-item ul,
+						.action-item li {
+							margin-left: 12px;
+							line-height: 1.2;
+						}
+						
+						/* Images adaptatives */
 						.action-item img {
 							max-width: 100%;
-							max-height: 80px;
+							max-height: ${contentDensity > 30 ? '50px' : '80px'};
 							height: auto;
-							margin: 5px 0;
+							margin: 4px auto;
 							border-radius: 3px;
 							display: block;
 						}
 						
-						/* Emergency - Compact */
+						/* Emergency compact */
 						.emergency-contact {
 							background: ${emergencyColor};
 							color: white;
-							padding: 8px;
-							margin: 5px 10px;
+							padding: 6px 15px;
 							text-align: center;
-							font-size: 0.85em;
+							font-size: 0.9em;
 							font-weight: 700;
-							border-radius: 6px;
-							flex-shrink: 0;
-							line-height: 1.3;
+							flex: 0 0 ${emergencyHeightMM}mm;
+							display: flex;
+							align-items: center;
+							justify-content: center;
+							line-height: 1.2;
 						}
 						
-						/* Footer - Compact */
+						/* Footer compact */
 						.footer {
 							background: ${footerColor};
 							color: white;
 							text-align: center;
-							padding: 8px;
+							padding: 6px 10px;
 							position: relative;
-							flex-shrink: 0;
+							flex: 0 0 ${footerHeightMM}mm;
+							display: flex;
+							flex-direction: column;
+							justify-content: center;
 						}
 						
 						.footer p {
-							margin: 2px 0;
-							font-size: 0.75em;
-							line-height: 1.3;
+							margin: 1px 0;
+							font-size: 0.8em;
+							line-height: 1.2;
 						}
 						
+						/* Ajustements pour contenu très dense */
+						${contentDensity > 35 ? `
+							.step { padding: 8px 6px; padding-top: 25px; }
+							.step-icon { font-size: 1.8em; margin-bottom: 3px; }
+							.step h3 { font-size: 1em; margin-bottom: 4px; }
+							.action-item { padding: 4px; font-size: 0.9em; }
+							.step-number { width: 25px; height: 25px; font-size: 0.9em; }
+						` : ''}
+						
 						@media print {
-							body {
-								print-color-adjust: exact;
-								-webkit-print-color-adjust: exact;
+							html, body, .page-container {
+								width: 100% !important;
+								height: 100% !important;
+								margin: 0 !important;
+								padding: 0 !important;
 							}
 							
 							.no-print {
 								display: none !important;
 							}
 							
-							.page-container {
-								height: 100vh !important;
+							/* FORCER l'affichage de tout le contenu à l'impression */
+							.step-content {
+								overflow: visible !important;
+								max-height: none !important;
+								height: auto !important;
 							}
+							
+							.step {
+								overflow: visible !important;
+								height: auto !important;
+								min-height: 0 !important;
+							}
+							
+							.steps-grid {
+								grid-auto-rows: auto !important;
+							}
+							
+							body {
+								print-color-adjust: exact;
+								-webkit-print-color-adjust: exact;
+							}
+							
+							/* Réduction extrême si nécessaire */
+							${contentDensity > 40 ? `
+								.action-item { 
+									font-size: ${Math.max(6, actionFontSize * 0.8)}px !important; 
+									padding: 2px 3px !important; 
+									line-height: 1.1 !important;
+								}
+								.step { 
+									padding: 5px 4px !important; 
+									padding-top: 20px !important; 
+								}
+								.step-icon {
+									font-size: 1.4em !important;
+									margin-bottom: 2px !important;
+								}
+								.step h3 {
+									font-size: 0.9em !important;
+									margin-bottom: 3px !important;
+								}
+							` : ''}
 						}
 						
-						/* Contrôles d'impression */
-						.print-controls {
-							text-align: center;
-							padding: 20px;
-							background: #f8f9fa;
-							border-bottom: 2px solid #dee2e6;
-						}
-						
-						.print-controls button {
-							background: #0056b3;
+						/* Mode debug pour voir les problèmes */
+						.debug-info {
+							position: fixed;
+							bottom: 10px;
+							right: 10px;
+							background: rgba(0,0,0,0.8);
 							color: white;
-							border: none;
-							padding: 10px 25px;
-							margin: 0 10px;
+							padding: 10px;
 							border-radius: 5px;
-							cursor: pointer;
-							font-size: 16px;
+							font-size: 11px;
+							z-index: 1000;
 						}
-						
-						.print-controls button:hover {
-							background: #003d82;
-						}
-						
-						.format-info {
-							background: #fff3cd;
-							padding: 15px;
-							margin: 20px;
-							border-radius: 8px;
-							text-align: center;
-							border: 1px solid #ffeaa7;
-							color: #856404;
-						}
-						
-						/* Ajustements pour très nombreuses étapes */
-						${stepCount > 8 ? `
-							.step { padding: 10px 8px; padding-top: 20px; }
-							.step-icon { font-size: 1.5em; margin-bottom: 5px; }
-							.step h3 { font-size: 1em; margin-bottom: 5px; }
-							.action-item { padding: 4px 6px; margin: 2px 0; font-size: 0.8em; }
-							.step-content { font-size: 0.8em; }
-						` : ''}
-						
-						${stepCount > 12 ? `
-							.header h1 { font-size: 1.8em; }
-							.header p { font-size: 0.8em; }
-							.timeline-item { font-size: 0.7em; padding: 3px 8px; }
-							.emergency-contact { padding: 10px; font-size: 0.8em; }
-							.footer p { font-size: 0.75em; }
-						` : ''}
 					</style>
 				</head>
 				<body>
-					<div class="print-controls no-print">
-						<h2>🖨️ Aperçu d'impression - Une seule page</h2>
-						<div class="format-info">
-							<strong>⚠️ Mode affiche :</strong> Tout le contenu sera ajusté pour tenir sur une seule page ${format.name}<br>
-							<small>${stepCount} étapes réparties sur ${rowsNeeded} ligne(s) × ${format.cols} colonne(s)</small>
+					<div class="print-controls no-print" style="text-align: center; padding: 20px; background: #f8f9fa;">
+						<h2>🖨️ Aperçu d'impression adaptatif</h2>
+						<div style="background: #e3f2fd; padding: 15px; margin: 20px auto; max-width: 600px; border-radius: 8px;">
+							<strong>📊 Analyse du contenu :</strong><br>
+							Format : ${config.name} • ${stepCount} étapes sur ${optimalColumns} colonnes<br>
+							Densité : ${contentDensity.toFixed(0)} • Police : ${fontSize.toFixed(1)}px / Actions : ${actionFontSize.toFixed(1)}px<br>
+							<small style="color: #666;">💡 Colonnes adaptées automatiquement selon le contenu</small>
 						</div>
-						<button onclick="window.print()">🖨️ Imprimer l'affiche</button>
-						<button onclick="window.close()" style="background: #6c757d;">❌ Fermer</button>
+						<button onclick="window.print()" style="background: #0056b3; color: white; border: none; padding: 12px 30px; font-size: 16px; border-radius: 5px; cursor: pointer; margin: 10px;">
+							🖨️ Imprimer
+						</button>
+						<button onclick="toggleDebug()" style="background: #ff9800; color: white; border: none; padding: 12px 30px; font-size: 16px; border-radius: 5px; cursor: pointer; margin: 10px;">
+							🔍 Debug
+						</button>
+						<button onclick="window.close()" style="background: #6c757d; color: white; border: none; padding: 12px 30px; font-size: 16px; border-radius: 5px; cursor: pointer; margin: 10px;">
+							❌ Fermer
+						</button>
 					</div>
 					
 					<div class="page-container">
@@ -4686,29 +4845,31 @@ ${cssCustomization.includeReset ? `
 							).join('')}
 						</div>
 						
-						<div class="steps-grid">
-							${stepsData.map(step => `
-								<div class="step ${step.category}">
-									<div class="step-number">${step.number}</div>
-									<div class="step-icon">${escapeHtml(step.icon)}</div>
-									<h3>${escapeHtml(step.title)}</h3>
-									<div class="step-content">
-										${step.actions.map(action => {
-											const imageSrc = action.image?.url || action.image?.file;
-											const imageHtml = imageSrc ? 
-												`<img src="${imageSrc}" alt="Image">` : '';
-											
-											return `
-												<div class="action-item ${action.type}">
-													${action.image?.position === 'above' ? imageHtml : ''}
-													${sanitizeHtml(action.text)}
-													${action.image?.position === 'below' ? imageHtml : ''}
-												</div>
-											`;
-										}).join('')}
+						<div class="steps-container">
+							<div class="steps-grid">
+								${stepsData.map((step, index) => `
+									<div class="step ${step.category}" data-step="${index}">
+										<div class="step-number">${step.number}</div>
+										<div class="step-icon">${escapeHtml(step.icon)}</div>
+										<h3>${escapeHtml(step.title)}</h3>
+										<div class="step-content" data-actions="${step.actions.length}">
+											${step.actions.map((action, actionIndex) => {
+												const imageSrc = action.image?.url || action.image?.file;
+												const imageHtml = imageSrc ? 
+													`<img src="${imageSrc}" alt="Image">` : '';
+												
+												return `
+													<div class="action-item ${action.type}" data-action="${actionIndex}">
+														${action.image?.position === 'above' ? imageHtml : ''}
+														${sanitizeHtml(action.text)}
+														${action.image?.position === 'below' ? imageHtml : ''}
+													</div>
+												`;
+											}).join('')}
+										</div>
 									</div>
-								</div>
-							`).join('')}
+								`).join('')}
+							</div>
 						</div>
 						
 						<div class="emergency-contact">
@@ -4720,6 +4881,72 @@ ${cssCustomization.includeReset ? `
 							${footerMessage.split('\n').map(line => `<p>${escapeHtml(line)}</p>`).join('')}
 						</div>
 					</div>
+					
+					<div class="debug-info no-print" id="debugInfo" style="display: none;">
+						<strong>Debug Info:</strong><br>
+						Steps: ${stepCount}<br>
+						Columns: ${optimalColumns}<br>
+						Row height: ${stepHeightMM.toFixed(0)}mm<br>
+						Density: ${contentDensity.toFixed(0)}<br>
+						Font: ${fontSize.toFixed(1)}px
+					</div>
+					
+					<script>
+						function toggleDebug() {
+							const debug = document.getElementById('debugInfo');
+							debug.style.display = debug.style.display === 'none' ? 'block' : 'none';
+							
+							// Afficher les infos de débordement
+							document.querySelectorAll('.step-content').forEach((content, i) => {
+								if (content.scrollHeight > content.clientHeight) {
+									console.log('Étape ' + (i + 1) + ' déborde de ' + (content.scrollHeight - content.clientHeight) + 'px');
+								}
+							});
+						}
+						
+						// Vérifier les débordements au chargement
+						window.onload = function() {
+							let hasOverflow = false;
+							let totalHiddenHeight = 0;
+							
+							document.querySelectorAll('.step-content').forEach((content, i) => {
+								const step = content.closest('.step');
+								const stepTitle = step.querySelector('h3').textContent;
+								
+								if (content.scrollHeight > content.clientHeight) {
+									hasOverflow = true;
+									const hiddenHeight = content.scrollHeight - content.clientHeight;
+									totalHiddenHeight += hiddenHeight;
+									
+									content.style.borderRight = '3px solid orange';
+									console.warn('Étape "' + stepTitle + '" : ' + hiddenHeight + 'px de contenu masqué');
+									
+									// Compter les actions visibles vs totales
+									const totalActions = content.querySelectorAll('.action-item').length;
+									let visibleActions = 0;
+									content.querySelectorAll('.action-item').forEach(action => {
+										const rect = action.getBoundingClientRect();
+										const containerRect = content.getBoundingClientRect();
+										if (rect.top >= containerRect.top && rect.bottom <= containerRect.bottom) {
+											visibleActions++;
+										}
+									});
+									
+									if (visibleActions < totalActions) {
+										console.warn('  → ' + visibleActions + '/' + totalActions + ' actions visibles');
+									}
+								}
+							});
+							
+							if (hasOverflow) {
+								console.error('⚠️ ATTENTION : ' + totalHiddenHeight + 'px de contenu total masqué !');
+								console.info('💡 Utilisez la molette ou le trackpad pour faire défiler le contenu dans l\'aperçu.');
+								console.info('💡 À l\'impression, essayez de réduire le contenu ou d\'augmenter le nombre de colonnes.');
+							} else {
+								console.log('✅ Tout le contenu est visible');
+							}
+						};
+					<\/script>
 				</body>
 				</html>
 			`;
@@ -4727,8 +4954,9 @@ ${cssCustomization.includeReset ? `
 			previewWindow.document.write(printHTML);
 			previewWindow.document.close();
 			
-			showNotification('Aperçu d\'impression généré - Mode affiche une page', 'success');
+			showNotification(`Aperçu généré - ${optimalColumns} colonnes, police ${fontSize.toFixed(0)}px`, 'success');
 		}
+				
        /**
         * ========================================
         * FIN DU GÉNÉRATEUR COMPLET
