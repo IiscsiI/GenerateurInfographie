@@ -1,0 +1,2 @@
+# GenerateurInfographie
+Générateur d'inforgraphie
