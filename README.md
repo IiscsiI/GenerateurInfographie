@@ -1,6 +1,7 @@
 # 🛡️ Générateur d'Infographie Cybersécurité
 
-Ce projet est un **générateur visuel d'infographies** pour aider à diffuser des consignes de sécurité en cas de cyberattaque. Il permet aux collectivités, administrations ou équipes SSI de créer facilement un document visuel, personnalisable, imprimable et exportable.
+Ce projet est un **générateur visuel d'infographies** pour aider à diffuser des consignes de sécurité.
+Il permet aux collectivités, administrations ou équipes SSI de créer facilement un document visuel, personnalisable, imprimable et exportable.
 
 ## ✨ Fonctionnalités principales
 
