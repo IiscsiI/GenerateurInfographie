@@ -1,4 +1,4 @@
-🛡️ Générateur d'Infographie Cybersécurité v2.0
+🛡️ Générateur d'Infographie Cybersécurité v1.1
 
     🚨 Outil open source pour créer des procédures d'urgence en cas de cyberattaque - Personnalisable, responsive et prêt à l'emploi
 
