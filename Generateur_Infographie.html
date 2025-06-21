@@ -1074,19 +1074,9 @@
                     <button class="toolbar-btn" onclick="exportHTML()" title="Exporter en HTML">
                         📥 Export
                     </button>
-					<button class="btn btn-warning" onclick="printOnSinglePage()" title="Imprimer en mode affiche (une seule page)">
-						📄 Aperçu
+					<button class="btn btn-success" onclick="showCompleteExportSelector()" title="Tous les formats d'export">
+						📥 Export & Impression
 					</button>
-					<button class="btn btn-warning" onclick="printWithPreview()" title="Imprimer l'aperçu avec mise en page optimisée">
-						🖨️ Imprimer
-					</button>
-					<label for="print-format" style="font-size: 12px;">📄 Format</label>
-						<select id="print-format" class="toolbar-btn">
-							<option value="A4-portrait">A4 Portrait</option>
-							<option value="A4-landscape" selected>A4 Paysage</option>
-							<option value="A3-portrait">A3 Portrait</option>
-							<option value="A3-landscape">A3 Paysage</option>
-						</select>
                 </div>
             </div>
             
@@ -1502,6 +1492,14 @@ Cette procédure doit être affichée et connue de tous les collaborateurs</text
 
     <!-- Zone de notification -->
     <div id="notification" class="notification"></div>
+
+	<!-- Appels de bibliothèques -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+	<script>
+	  window.jspdf = window.jspdf || window.jspdf; // Assure la compatibilité globale
+	</script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.2.4/svg.min.js"></script>
 
     <script>
 	// ========================================
@@ -2621,7 +2619,7 @@ ${cssCustomization.includeReset ? `
 			}
 		}
 
-	// ========================================
+		// ========================================
         // GESTION DES ÉTAPES ET ACTIONS
         // ========================================
 
@@ -3550,6 +3548,1133 @@ ${cssCustomization.includeReset ? `
        function loadProject() {
            document.getElementById('load-file').click();
        }
+	   
+	   
+	   // ========================================
+       // Export en PDF pour impression
+       // ========================================
+
+		/**
+		 * Export PDF principal - Version simplifiée et debuggée
+		 */
+		async function exportPreviewAsHighResPDF() {
+			console.log('🔄 Début de l\'export PDF...');
+			showNotification('🔄 Génération du PDF...', 'info');
+
+			// Vérifications préliminaires
+			if (typeof window.jspdf === 'undefined') {
+				console.error('❌ jsPDF non chargé');
+				showNotification('⚠️ jsPDF non chargé', 'error');
+				return;
+			}
+
+			if (typeof html2canvas === 'undefined') {
+				console.error('❌ html2canvas non chargé');
+				showNotification('⚠️ html2canvas non chargé', 'error');
+				return;
+			}
+
+			const preview = document.getElementById('preview-container');
+			if (!preview) {
+				console.error('❌ Élément preview-container non trouvé');
+				showNotification('⚠️ Zone d\'aperçu non trouvée', 'error');
+				return;
+			}
+
+			console.log('✅ Bibliothèques et éléments OK');
+
+			try {
+				// ➤ ÉTAPE 1 : Préparation simple
+				console.log('📐 Préparation de la zone de capture...');
+				
+				// Sauvegarder les styles
+				const originalStyles = {
+					width: preview.style.width,
+					maxWidth: preview.style.maxWidth,
+					position: preview.style.position,
+					visibility: preview.style.visibility,
+					opacity: preview.style.opacity
+				};
+
+				// Optimisation simple pour la capture
+				preview.style.width = "1200px";
+				preview.style.maxWidth = "1200px";
+				preview.style.position = "relative";
+				preview.style.visibility = "visible";
+				preview.style.opacity = "1";
+
+				// Attendre que le DOM se stabilise
+				await new Promise(resolve => setTimeout(resolve, 500));
+				console.log('✅ Styles appliqués');
+
+				// ➤ ÉTAPE 2 : Test de visibilité
+				const rect = preview.getBoundingClientRect();
+				console.log('📏 Dimensions de l\'élément:', {
+					width: rect.width,
+					height: rect.height,
+					top: rect.top,
+					left: rect.left,
+					visible: rect.width > 0 && rect.height > 0
+				});
+
+				if (rect.width === 0 || rect.height === 0) {
+					throw new Error('Élément non visible ou sans dimensions');
+				}
+
+				// ➤ ÉTAPE 3 : Capture avec options simplifiées
+				console.log('📸 Début de la capture...');
+				showNotification('📸 Capture en cours...', 'info');
+
+				const canvas = await html2canvas(preview, {
+					scale: 2,
+					useCORS: true,
+					allowTaint: true,
+					backgroundColor: '#ffffff',
+					logging: true, // Activer les logs html2canvas
+					width: 1200,
+					height: rect.height,
+					x: 0,
+					y: 0,
+					scrollX: 0,
+					scrollY: 0,
+					windowWidth: window.innerWidth,
+					windowHeight: window.innerHeight
+				});
+
+				console.log('✅ Capture terminée:', {
+					width: canvas.width,
+					height: canvas.height
+				});
+
+				// ➤ ÉTAPE 4 : Vérification du canvas
+				if (canvas.width === 0 || canvas.height === 0) {
+					throw new Error('Canvas vide - dimensions nulles');
+				}
+
+				// Test : Créer une image de test pour vérifier le contenu
+				const testImg = canvas.toDataURL('image/png');
+				if (testImg.length < 1000) {
+					throw new Error('Canvas semble vide - données insuffisantes');
+				}
+
+				console.log('✅ Canvas valide, taille des données:', testImg.length);
+
+				// ➤ ÉTAPE 5 : Création du PDF
+				console.log('📄 Création du PDF...');
+				showNotification('📄 Création du PDF...', 'info');
+
+				const { jsPDF } = window.jspdf;
+				
+				// Créer un PDF aux dimensions exactes du contenu (pas de déformation)
+				const mmPerPx = 0.264583; // Conversion pixels vers mm (96 DPI)
+				const pdfWidthMM = Math.min(canvas.width * mmPerPx, 420); // Max A3 width
+				const pdfHeightMM = Math.min(canvas.height * mmPerPx, 594); // Max A2 height
+				
+				const pdf = new jsPDF({
+					orientation: pdfWidthMM > pdfHeightMM ? 'landscape' : 'portrait',
+					unit: 'mm',
+					format: [pdfWidthMM, pdfHeightMM] // Format personnalisé aux dimensions exactes
+				});
+
+				// Utiliser TOUTE la page sans déformation
+				const pageWidth = pdf.internal.pageSize.getWidth();
+				const pageHeight = pdf.internal.pageSize.getHeight();
+				
+				// Pas de redimensionnement - utiliser les dimensions exactes
+				const imgWidth = pageWidth;
+				const imgHeight = pageHeight;
+				const x = 0;
+				const y = 0;
+
+				console.log('📐 Dimensions PDF:', {
+					pageWidth, pageHeight,
+					imgWidth, imgHeight,
+					x, y,
+					canvasSize: `${canvas.width}x${canvas.height}`
+				});
+
+				// Ajouter l'image au PDF
+				const imgData = canvas.toDataURL('image/png', 0.95);
+				pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+
+				// ➤ ÉTAPE 6 : Sauvegarde
+				const projectName = document.getElementById('project-name').value || 'infographie';
+				const filename = `${projectName.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+				
+				console.log('💾 Sauvegarde:', filename);
+				pdf.save(filename);
+
+				showNotification(`✅ PDF généré avec succès : ${filename}`, 'success');
+				console.log('✅ Export terminé avec succès');
+
+				// ➤ ÉTAPE 7 : Restauration
+				Object.keys(originalStyles).forEach(key => {
+					preview.style[key] = originalStyles[key];
+				});
+
+				// Re-render pour restaurer l'affichage
+				setTimeout(() => renderPreview(), 200);
+
+			} catch (error) {
+				console.error('❌ Erreur lors de l\'export PDF:', error);
+				showNotification(`❌ Erreur : ${error.message}`, 'error');
+				
+				// Debug supplémentaire
+				console.log('🔍 Debug - État de l\'élément:', {
+					preview: !!preview,
+					visible: preview ? preview.offsetWidth > 0 : false,
+					children: preview ? preview.children.length : 0,
+					innerHTML: preview ? preview.innerHTML.length : 0
+				});
+			}
+		}
+
+		/**
+		 * Export PDF VRAIMENT sans espaces blancs - Version corrigée
+		 */
+		async function exportPreviewAsPDFFullWidth() {
+			console.log('🔄 Export PDF largeur maximale - Version 2...');
+			showNotification('🔄 Suppression complète des espaces blancs...', 'info');
+
+			try {
+				const preview = document.getElementById('preview-container');
+				
+				// Sauvegarder TOUS les styles qui pourraient limiter la largeur
+				const originalStyles = {
+					// Preview container
+					width: preview.style.width,
+					maxWidth: preview.style.maxWidth,
+					padding: preview.style.padding,
+					margin: preview.style.margin,
+					// Panel parent potentiel
+					panelWidth: null,
+					panelMaxWidth: null
+				};
+
+				// Vérifier si le preview est dans un panel qui limite sa largeur
+				const parentPanel = preview.closest('.preview-panel');
+				if (parentPanel) {
+					originalStyles.panelWidth = parentPanel.style.width;
+					originalStyles.panelMaxWidth = parentPanel.style.maxWidth;
+					// Temporairement libérer le panel parent
+					parentPanel.style.width = "100vw";
+					parentPanel.style.maxWidth = "none";
+				}
+
+				// ➤ ÉTAPE 1: Libérer COMPLÈTEMENT le conteneur
+				preview.style.width = "100vw"; // 100% de la largeur de la fenêtre
+				preview.style.maxWidth = "none"; // Supprimer toute limitation
+				preview.style.padding = "0";
+				preview.style.margin = "0 auto";
+				preview.style.boxSizing = "border-box";
+
+				// ➤ ÉTAPE 2: Forcer tous les enfants à utiliser toute la largeur
+				const container = preview.querySelector('.preview-container');
+				const grid = preview.querySelector('.preview-steps-grid');
+				const timeline = preview.querySelector('.preview-timeline');
+				const header = preview.querySelector('.preview-header');
+				const emergency = preview.querySelector('.preview-emergency-contact');
+				const footer = preview.querySelector('.preview-footer');
+
+				const originalChildStyles = {};
+
+				// Optimiser le conteneur principal
+				if (container) {
+					originalChildStyles.container = {
+						width: container.style.width,
+						maxWidth: container.style.maxWidth,
+						margin: container.style.margin,
+						padding: container.style.padding
+					};
+					
+					container.style.width = "100%";
+					container.style.maxWidth = "none";
+					container.style.margin = "0";
+					container.style.padding = "0";
+				}
+
+				// ➤ ÉTAPE 3: Optimiser la grille pour utiliser TOUTE la largeur
+				if (grid) {
+					originalChildStyles.grid = {
+						gridTemplateColumns: grid.style.gridTemplateColumns,
+						gap: grid.style.gap,
+						padding: grid.style.padding,
+						justifyContent: grid.style.justifyContent,
+						width: grid.style.width,
+						maxWidth: grid.style.maxWidth
+					};
+
+					const steps = grid.querySelectorAll('.preview-step');
+					const stepCount = steps.length;
+					
+					// Calculer le nombre optimal de colonnes pour remplir l'espace
+					let columns;
+					if (stepCount <= 2) {
+						columns = 2; // 2 larges colonnes
+					} else if (stepCount <= 4) {
+						columns = 2; // 2x2
+					} else if (stepCount <= 6) {
+						columns = 3; // 2x3
+					} else if (stepCount <= 8) {
+						columns = 4; // 2x4
+					} else {
+						columns = 4; // Max 4 colonnes
+					}
+
+					grid.style.display = "grid";
+					grid.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`; // minmax(0, 1fr) force l'utilisation de l'espace
+					grid.style.gap = "10px"; // Gap minimal
+					grid.style.padding = "10px"; // Padding minimal
+					grid.style.justifyContent = "stretch";
+					grid.style.width = "100%";
+					grid.style.maxWidth = "none";
+					grid.style.margin = "0";
+
+					// Optimiser chaque carte individuellement
+					steps.forEach(step => {
+						step.style.margin = "0";
+						step.style.width = "100%";
+						step.style.minWidth = "0"; // Permet à la carte de rétrécir si nécessaire
+					});
+				}
+
+				// ➤ ÉTAPE 4: Timeline étalée sur toute la largeur
+				if (timeline) {
+					originalChildStyles.timeline = {
+						justifyContent: timeline.style.justifyContent,
+						padding: timeline.style.padding,
+						width: timeline.style.width,
+						maxWidth: timeline.style.maxWidth,
+						margin: timeline.style.margin
+					};
+					
+					timeline.style.display = "flex";
+					timeline.style.justifyContent = "space-evenly"; // Répartir uniformément
+					timeline.style.padding = "20px 10px";
+					timeline.style.width = "100%";
+					timeline.style.maxWidth = "none";
+					timeline.style.margin = "0";
+				}
+
+				// ➤ ÉTAPE 5: Optimiser header, emergency et footer
+				[header, emergency, footer].forEach((element, index) => {
+					if (element) {
+						const elementName = ['header', 'emergency', 'footer'][index];
+						originalChildStyles[elementName] = {
+							padding: element.style.padding,
+							margin: element.style.margin,
+							width: element.style.width,
+							maxWidth: element.style.maxWidth
+						};
+						
+						element.style.padding = "30px 20px";
+						element.style.margin = "0";
+						element.style.width = "100%";
+						element.style.maxWidth = "none";
+					}
+				});
+
+				// Attendre que tous les changements soient appliqués
+				await new Promise(resolve => setTimeout(resolve, 500));
+
+				// ➤ ÉTAPE 6: Mesurer les dimensions réelles après optimisation
+				const rect = preview.getBoundingClientRect();
+				const scrollWidth = preview.scrollWidth;
+				const scrollHeight = preview.scrollHeight;
+				
+				console.log('📏 Dimensions après optimisation:', {
+					rect: `${Math.round(rect.width)}×${Math.round(rect.height)}`,
+					scroll: `${scrollWidth}×${scrollHeight}`,
+					window: `${window.innerWidth}×${window.innerHeight}`
+				});
+
+				// ➤ ÉTAPE 7: Capture en utilisant les dimensions optimales
+				const captureWidth = Math.min(scrollWidth, window.innerWidth * 0.98); // 98% de la fenêtre max
+				
+				const canvas = await html2canvas(preview, {
+					scale: 2.5,
+					useCORS: true,
+					allowTaint: true,
+					backgroundColor: '#ffffff',
+					width: captureWidth,
+					height: scrollHeight,
+					scrollX: 0,
+					scrollY: 0,
+					windowWidth: captureWidth,
+					windowHeight: scrollHeight
+				});
+
+				console.log('✅ Canvas optimisé:', canvas.width, 'x', canvas.height);
+
+				// ➤ ÉTAPE 8: Créer un PDF qui utilise vraiment toute la page
+				const { jsPDF } = window.jspdf;
+				
+				// Calculer le format optimal
+				const contentRatio = canvas.width / canvas.height;
+				let orientation, format;
+				
+				if (contentRatio > 1.4) {
+					// Très large -> A3 paysage
+					orientation = 'landscape';
+					format = 'a3';
+				} else if (contentRatio > 1.0) {
+					// Modérément large -> A4 paysage
+					orientation = 'landscape';
+					format = 'a4';
+				} else {
+					// Portrait -> A3 portrait pour plus d'espace
+					orientation = 'portrait';
+					format = 'a3';
+				}
+
+				const pdf = new jsPDF({
+					orientation: orientation,
+					unit: 'mm',
+					format: format
+				});
+
+				const pageWidth = pdf.internal.pageSize.getWidth();
+				const pageHeight = pdf.internal.pageSize.getHeight();
+				
+				// Marges minimales (1mm seulement !)
+				const margin = 1;
+				const printWidth = pageWidth - (margin * 2);
+				const printHeight = pageHeight - (margin * 2);
+				
+				// Utiliser TOUTE la surface disponible
+				const mmPerPx = 0.264583;
+				const imgWidthMM = canvas.width * mmPerPx;
+				const imgHeightMM = canvas.height * mmPerPx;
+				
+				const scaleW = printWidth / imgWidthMM;
+				const scaleH = printHeight / imgHeightMM;
+				const scale = Math.min(scaleW, scaleH);
+				
+				const finalWidth = imgWidthMM * scale;
+				const finalHeight = imgHeightMM * scale;
+				
+				const x = (pageWidth - finalWidth) / 2;
+				const y = (pageHeight - finalHeight) / 2;
+
+				// Statistiques d'optimisation
+				const pageArea = pageWidth * pageHeight;
+				const usedArea = finalWidth * finalHeight;
+				const utilization = (usedArea / pageArea * 100);
+
+				console.log('📊 Statistiques PDF:', {
+					format: `${format.toUpperCase()} ${orientation}`,
+					page: `${pageWidth.toFixed(0)}×${pageHeight.toFixed(0)}mm`,
+					content: `${finalWidth.toFixed(0)}×${finalHeight.toFixed(0)}mm`,
+					utilisation: `${utilization.toFixed(1)}%`,
+					scale: scale.toFixed(3),
+					marges: `${margin}mm`
+				});
+
+				// Ajouter l'image
+				const imgData = canvas.toDataURL('image/png', 0.98);
+				pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight, undefined, 'FAST');
+
+				// Sauvegarde
+				const projectName = document.getElementById('project-name').value || 'infographie';
+				const filename = `${projectName.replace(/[^a-zA-Z0-9]/g, '_')}_pleine_largeur_${format}_${utilization.toFixed(0)}pct_${new Date().toISOString().split('T')[0]}.pdf`;
+				pdf.save(filename);
+
+				showNotification(`✅ PDF généré - ${utilization.toFixed(1)}% de la page utilisée`, 'success');
+
+				// ➤ RESTAURATION COMPLÈTE
+				Object.keys(originalStyles).forEach(key => {
+					if (key === 'panelWidth' || key === 'panelMaxWidth') return;
+					preview.style[key] = originalStyles[key] || "";
+				});
+
+				// Restaurer le panel parent
+				if (parentPanel) {
+					parentPanel.style.width = originalStyles.panelWidth || "";
+					parentPanel.style.maxWidth = originalStyles.panelMaxWidth || "";
+				}
+
+				// Restaurer tous les enfants
+				if (container && originalChildStyles.container) {
+					Object.keys(originalChildStyles.container).forEach(key => {
+						container.style[key] = originalChildStyles.container[key] || "";
+					});
+				}
+
+				if (grid && originalChildStyles.grid) {
+					Object.keys(originalChildStyles.grid).forEach(key => {
+						grid.style[key] = originalChildStyles.grid[key] || "";
+					});
+					
+					const steps = grid.querySelectorAll('.preview-step');
+					steps.forEach(step => {
+						step.style.margin = "";
+						step.style.width = "";
+						step.style.minWidth = "";
+					});
+				}
+
+				if (timeline && originalChildStyles.timeline) {
+					Object.keys(originalChildStyles.timeline).forEach(key => {
+						timeline.style[key] = originalChildStyles.timeline[key] || "";
+					});
+				}
+
+				['header', 'emergency', 'footer'].forEach((elementName, index) => {
+					const element = [header, emergency, footer][index];
+					if (element && originalChildStyles[elementName]) {
+						Object.keys(originalChildStyles[elementName]).forEach(key => {
+							element.style[key] = originalChildStyles[elementName][key] || "";
+						});
+					}
+				});
+
+				setTimeout(() => renderPreview(), 400);
+
+			} catch (error) {
+				console.error('❌ Erreur export pleine largeur v2:', error);
+				showNotification(`❌ Erreur : ${error.message}`, 'error');
+			}
+		}
+
+		// ========================================
+		// EXPORTS ALTERNATIFS POUR IMPRESSION - VERSION NATIVE
+		// Utilise uniquement les API natives du navigateur (pas de CDN externe)
+		// ========================================
+
+		/**
+		 * Export PNG haute résolution (300 DPI pour impression) - Version native
+		 */
+		async function exportPreviewAsHighResPNG() {
+			showNotification('🖼️ Génération PNG haute résolution...', 'info');
+			
+			try {
+				const preview = document.getElementById('preview-container');
+				
+				// Optimiser temporairement pour capture
+				const originalWidth = preview.style.width;
+				preview.style.width = "1200px";
+				preview.style.maxWidth = "1200px";
+				
+				await new Promise(resolve => setTimeout(resolve, 300));
+
+				// Capture ultra haute résolution (300 DPI équivalent)
+				const canvas = await html2canvas(preview, {
+					scale: 4, // 4x = ~300 DPI pour impression
+					useCORS: true,
+					allowTaint: true,
+					backgroundColor: '#ffffff',
+					width: 1200,
+					scrollX: 0,
+					scrollY: 0
+				});
+
+				console.log('✅ PNG haute résolution:', canvas.width, 'x', canvas.height);
+
+				// Utiliser l'API native toBlob (supportée par tous les navigateurs modernes)
+				if (canvas.toBlob) {
+					canvas.toBlob(blob => {
+						const url = URL.createObjectURL(blob);
+						const a = document.createElement('a');
+						a.href = url;
+						
+						const projectName = document.getElementById('project-name').value || 'infographie';
+						const filename = `${projectName.replace(/[^a-zA-Z0-9]/g, '_')}_300dpi_${canvas.width}x${canvas.height}_${new Date().toISOString().split('T')[0]}.png`;
+						a.download = filename;
+						
+						document.body.appendChild(a);
+						a.click();
+						document.body.removeChild(a);
+						URL.revokeObjectURL(url);
+						
+						showNotification(`✅ PNG haute résolution généré : ${filename}`, 'success');
+					}, 'image/png', 1.0);
+				} else {
+					// Fallback pour très vieux navigateurs
+					const imgData = canvas.toDataURL('image/png', 1.0);
+					const link = document.createElement('a');
+					link.download = `infographie_300dpi_${new Date().toISOString().split('T')[0]}.png`;
+					link.href = imgData;
+					link.click();
+					showNotification('✅ PNG généré (mode compatibilité)', 'success');
+				}
+
+				// Restaurer
+				preview.style.width = originalWidth;
+				setTimeout(() => renderPreview(), 200);
+
+			} catch (error) {
+				console.error('❌ Erreur export PNG:', error);
+				showNotification(`❌ Erreur : ${error.message}`, 'error');
+			}
+		}
+
+		/**
+		 * Export SVG vectoriel - Méthode native (pas de dépendance externe)
+		 */
+		async function exportPreviewAsSVG() {
+			showNotification('🎨 Génération SVG vectoriel...', 'info');
+			
+			try {
+				const preview = document.getElementById('preview-container');
+				
+				// Optimiser pour capture
+				const originalWidth = preview.style.width;
+				preview.style.width = "1000px";
+				preview.style.maxWidth = "1000px";
+				
+				await new Promise(resolve => setTimeout(resolve, 300));
+
+				// Capturer en PNG d'abord (plus fiable)
+				const canvas = await html2canvas(preview, {
+					scale: 2,
+					useCORS: true,
+					allowTaint: true,
+					backgroundColor: '#ffffff',
+					width: 1000
+				});
+
+				// Créer un SVG qui embed l'image PNG (méthode native)
+				const imgData = canvas.toDataURL('image/png');
+				const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+		<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+			 width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}">
+			<title>Infographie Cybersécurité - Procédure d'urgence</title>
+			<desc>Générée par le Générateur d'Infographie Open Source v2.0</desc>
+			<rect width="100%" height="100%" fill="#ffffff"/>
+			<image x="0" y="0" width="${canvas.width}" height="${canvas.height}" 
+				   xlink:href="${imgData}" />
+		</svg>`;
+
+				// Créer le blob SVG avec les API natives
+				const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+				
+				// Téléchargement natif
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				
+				const projectName = document.getElementById('project-name').value || 'infographie';
+				const filename = `${projectName.replace(/[^a-zA-Z0-9]/g, '_')}_vectoriel_${canvas.width}x${canvas.height}_${new Date().toISOString().split('T')[0]}.svg`;
+				a.download = filename;
+				
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				URL.revokeObjectURL(url);
+
+				showNotification(`✅ SVG vectoriel généré : ${filename}`, 'success');
+
+				// Restaurer
+				preview.style.width = originalWidth;
+				setTimeout(() => renderPreview(), 200);
+
+			} catch (error) {
+				console.error('❌ Erreur export SVG:', error);
+				showNotification(`❌ Erreur : ${error.message}`, 'error');
+			}
+		}
+
+		/**
+		 * Export JPEG optimisé (plus léger pour email) - Version native
+		 */
+		async function exportPreviewAsJPEG() {
+			showNotification('📷 Génération JPEG optimisé...', 'info');
+			
+			try {
+				const preview = document.getElementById('preview-container');
+				
+				const originalWidth = preview.style.width;
+				preview.style.width = "1200px";
+				preview.style.maxWidth = "1200px";
+				
+				await new Promise(resolve => setTimeout(resolve, 300));
+
+				const canvas = await html2canvas(preview, {
+					scale: 2.5,
+					useCORS: true,
+					allowTaint: true,
+					backgroundColor: '#ffffff',
+					width: 1200
+				});
+
+				// Export JPEG avec API native
+				if (canvas.toBlob) {
+					canvas.toBlob(blob => {
+						const url = URL.createObjectURL(blob);
+						const a = document.createElement('a');
+						a.href = url;
+						
+						const projectName = document.getElementById('project-name').value || 'infographie';
+						const sizeKB = Math.round(blob.size / 1024);
+						const filename = `${projectName.replace(/[^a-zA-Z0-9]/g, '_')}_${sizeKB}KB_${new Date().toISOString().split('T')[0]}.jpg`;
+						a.download = filename;
+						
+						document.body.appendChild(a);
+						a.click();
+						document.body.removeChild(a);
+						URL.revokeObjectURL(url);
+						
+						showNotification(`✅ JPEG généré (${sizeKB}KB) : ${filename}`, 'success');
+					}, 'image/jpeg', 0.92); // Qualité 92% = bon compromis taille/qualité
+				} else {
+					// Fallback dataURL
+					const imgData = canvas.toDataURL('image/jpeg', 0.92);
+					const link = document.createElement('a');
+					link.download = `infographie_${new Date().toISOString().split('T')[0]}.jpg`;
+					link.href = imgData;
+					link.click();
+					showNotification('✅ JPEG généré (mode compatibilité)', 'success');
+				}
+
+				preview.style.width = originalWidth;
+				setTimeout(() => renderPreview(), 200);
+
+			} catch (error) {
+				console.error('❌ Erreur export JPEG:', error);
+				showNotification(`❌ Erreur : ${error.message}`, 'error');
+			}
+		}
+
+		/**
+		 * Export WebP moderne (meilleure compression que JPEG)
+		 */
+		async function exportPreviewAsWebP() {
+			showNotification('🌐 Génération WebP moderne...', 'info');
+			
+			try {
+				const preview = document.getElementById('preview-container');
+				
+				const originalWidth = preview.style.width;
+				preview.style.width = "1200px";
+				preview.style.maxWidth = "1200px";
+				
+				await new Promise(resolve => setTimeout(resolve, 300));
+
+				const canvas = await html2canvas(preview, {
+					scale: 2.5,
+					useCORS: true,
+					allowTaint: true,
+					backgroundColor: '#ffffff',
+					width: 1200
+				});
+
+				// Vérifier support WebP
+				if (canvas.toBlob) {
+					canvas.toBlob(blob => {
+						if (blob) {
+							const url = URL.createObjectURL(blob);
+							const a = document.createElement('a');
+							a.href = url;
+							
+							const projectName = document.getElementById('project-name').value || 'infographie';
+							const sizeKB = Math.round(blob.size / 1024);
+							const filename = `${projectName.replace(/[^a-zA-Z0-9]/g, '_')}_${sizeKB}KB_${new Date().toISOString().split('T')[0]}.webp`;
+							a.download = filename;
+							
+							document.body.appendChild(a);
+							a.click();
+							document.body.removeChild(a);
+							URL.revokeObjectURL(url);
+							
+							showNotification(`✅ WebP généré (${sizeKB}KB) : ${filename}`, 'success');
+						} else {
+							showNotification('⚠️ WebP non supporté, utilisation de JPEG', 'warning');
+							exportPreviewAsJPEG();
+						}
+					}, 'image/webp', 0.92);
+				} else {
+					showNotification('⚠️ WebP non supporté, utilisation de JPEG', 'warning');
+					exportPreviewAsJPEG();
+				}
+
+				preview.style.width = originalWidth;
+				setTimeout(() => renderPreview(), 200);
+
+			} catch (error) {
+				console.error('❌ Erreur export WebP:', error);
+				showNotification('❌ WebP échoué, utilisation de JPEG', 'warning');
+				exportPreviewAsJPEG();
+			}
+		}
+
+		/**
+		 * Export HTML autonome pour impression navigateur
+		 */
+		async function exportPreviewAsHTMLPrint() {
+			showNotification('🌐 Génération HTML impression...', 'info');
+			
+			try {
+				const preview = document.getElementById('preview-container');
+				const projectName = document.getElementById('project-name').value || 'infographie';
+				
+				// CSS spécial impression
+				const printCSS = `
+					@media print {
+						@page {
+							size: A3 portrait;
+							margin: 5mm;
+						}
+						body {
+							margin: 0;
+							padding: 0;
+							background: white !important;
+							-webkit-print-color-adjust: exact;
+							color-adjust: exact;
+						}
+						.preview-container {
+							max-width: none !important;
+							width: 100% !important;
+							page-break-inside: avoid;
+						}
+						.preview-step {
+							page-break-inside: avoid;
+							break-inside: avoid;
+						}
+					}
+				`;
+
+				// Générer HTML complet avec CSS d'impression
+				const htmlContent = `<!DOCTYPE html>
+		<html lang="fr">
+		<head>
+			<meta charset="UTF-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+			<title>${projectName} - Version Impression</title>
+			<style>
+				${generateCustomizedCss()}
+				${printCSS}
+			</style>
+		</head>
+		<body>
+			<div class="print-instructions" style="background: #f0f7ff; padding: 15px; margin: 20px; border-radius: 8px; border: 2px solid #007bff;">
+				<h3>📋 Instructions d'impression :</h3>
+				<ul>
+					<li><strong>Format :</strong> A3 Portrait recommandé</li>
+					<li><strong>Marges :</strong> Minimales (5mm)</li>
+					<li><strong>Couleurs :</strong> Activer l'impression des couleurs de fond</li>
+					<li><strong>Échelle :</strong> Ajuster à la page</li>
+				</ul>
+				<p><em>Cette section ne s'imprimera pas automatiquement.</em></p>
+			</div>
+			
+			${preview.outerHTML}
+			
+			<script>
+				// Auto-print après 2 secondes (optionnel)
+				// setTimeout(() => window.print(), 2000);
+				
+				console.log('📄 Page prête pour impression optimisée');
+				console.log('💡 Utilisez Ctrl+P pour imprimer');
+			<\/script>
+		</body>
+		</html>`;
+
+				// Téléchargement
+				const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = `${projectName.replace(/[^a-zA-Z0-9]/g, '_')}_impression_${new Date().toISOString().split('T')[0]}.html`;
+				
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				URL.revokeObjectURL(url);
+
+				showNotification('✅ HTML impression généré - Ouvrez et utilisez Ctrl+P', 'success');
+
+			} catch (error) {
+				console.error('❌ Erreur export HTML:', error);
+				showNotification(`❌ Erreur : ${error.message}`, 'error');
+			}
+		}
+
+		/**
+		 * Sélecteur complet d'exports (PDF + autres formats)
+		 */
+		function showCompleteExportSelector() {
+			const modal = document.createElement('div');
+			modal.style.cssText = `
+				position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+				background: rgba(0,0,0,0.7); display: flex; justify-content: center;
+				align-items: center; z-index: 30000;
+			`;
+			
+			modal.innerHTML = `
+				<div style="background: white; padding: 30px; border-radius: 15px; max-width: 650px; text-align: center;">
+					<h3 style="margin-bottom: 20px; color: #2c3e50;">📥 Export & Impression</h3>
+					
+					<div style="display: grid; gap: 20px; margin: 20px 0;">
+						<!-- PDF Section -->
+						<div style="border: 2px solid #007bff; border-radius: 10px; padding: 20px; background: #f8f9ff;">
+							<h4 style="color: #007bff; margin-bottom: 15px;">📄 Formats PDF</h4>
+							<div style="display: grid; gap: 10px;">
+								<button class="btn btn-success" onclick="exportPreviewAsPDFFullWidth(); document.body.removeChild(this.closest('div').parentElement.parentElement);" 
+										style="padding: 12px; font-size: 14px;">
+									✨ PDF Optimisé (Recommandé)<br>
+									<small style="opacity: 0.8;">Sans espaces blancs - 90%+ de la page</small>
+								</button>
+								<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+									<button class="btn btn-primary" onclick="exportPDFFormatA3(); document.body.removeChild(this.closest('div').parentElement.parentElement.parentElement);" 
+											style="padding: 8px; font-size: 12px;">📄 A3 Portrait</button>
+									<button class="btn btn-info" onclick="exportPDFFormatA4(); document.body.removeChild(this.closest('div').parentElement.parentElement.parentElement);" 
+											style="padding: 8px; font-size: 12px;">📄 A4 Portrait</button>
+								</div>
+							</div>
+						</div>
+						
+						<!-- Images Section -->
+						<div style="border: 2px solid #28a745; border-radius: 10px; padding: 20px; background: #f8fff8;">
+							<h4 style="color: #28a745; margin-bottom: 15px;">🖼️ Formats Image</h4>
+							<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+								<button class="btn btn-success" onclick="exportPreviewAsHighResPNG(); document.body.removeChild(this.closest('div').parentElement.parentElement.parentElement);" 
+										style="padding: 10px; font-size: 12px;">
+									🖼️ PNG 300 DPI<br>
+									<small>Impression pro</small>
+								</button>
+								<button class="btn btn-info" onclick="exportPreviewAsJPEG(); document.body.removeChild(this.closest('div').parentElement.parentElement.parentElement);" 
+										style="padding: 10px; font-size: 12px;">
+									📷 JPEG<br>
+									<small>Email/Web</small>
+								</button>
+								<button class="btn btn-warning" onclick="exportPreviewAsSVG(); document.body.removeChild(this.closest('div').parentElement.parentElement.parentElement);" 
+										style="padding: 10px; font-size: 12px;">
+									🎨 SVG<br>
+									<small>Vectoriel</small>
+								</button>
+								<button class="btn btn-secondary" onclick="exportPreviewAsWebP(); document.body.removeChild(this.closest('div').parentElement.parentElement.parentElement);" 
+										style="padding: 10px; font-size: 12px;">
+									🌐 WebP<br>
+									<small>Moderne</small>
+								</button>
+							</div>
+						</div>
+						
+						<!-- Print Section -->
+						<div style="border: 2px solid #ffc107; border-radius: 10px; padding: 20px; background: #fffdf0;">
+							<h4 style="color: #856404; margin-bottom: 15px;">🖨️ Impression Directe</h4>
+							<button class="btn btn-warning" onclick="exportPreviewAsHTMLPrint(); document.body.removeChild(this.closest('div').parentElement.parentElement);" 
+									style="padding: 12px; font-size: 14px; width: 100%;">
+								🌐 HTML Optimisé Impression<br>
+								<small style="opacity: 0.8;">Ouvre une page optimisée pour Ctrl+P</small>
+							</button>
+						</div>
+					</div>
+					
+					<details style="margin-top: 15px; text-align: left;">
+						<summary style="cursor: pointer; font-weight: 600; color: #6c757d;">🔧 Outils de diagnostic</summary>
+						<div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+							<button class="btn btn-secondary" onclick="diagnosePDFIssues();" 
+									style="padding: 8px; font-size: 12px;">🔍 Diagnostic</button>
+							<button class="btn btn-secondary" onclick="quickPDFDiagnosis();" 
+									style="padding: 8px; font-size: 12px;">📊 Analyse rapide</button>
+						</div>
+					</details>
+					
+					<button class="btn btn-light" onclick="document.body.removeChild(this.parentElement.parentElement);" 
+							style="margin-top: 20px; border: 1px solid #dee2e6;">
+						Fermer
+					</button>
+				</div>
+			`;
+			
+			document.body.appendChild(modal);
+		}
+
+		/**
+		 * Sélecteur PDF simplifié (garde l'ancien pour compatibilité)
+		 */
+		function showSmartPDFSelector() {
+			const modal = document.createElement('div');
+			modal.style.cssText = `
+				position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+				background: rgba(0,0,0,0.7); display: flex; justify-content: center;
+				align-items: center; z-index: 30000;
+			`;
+			
+			modal.innerHTML = `
+				<div style="background: white; padding: 30px; border-radius: 15px; max-width: 550px; text-align: center;">
+					<h3 style="margin-bottom: 20px; color: #2c3e50;">📄 Export PDF</h3>
+					
+					<div style="display: grid; gap: 15px; margin: 20px 0;">
+						<button class="btn btn-success" onclick="exportPreviewAsPDFFullWidth(); document.body.removeChild(this.closest('div').parentElement);" 
+								style="padding: 18px; font-size: 16px; border-radius: 8px;">
+							✨ Optimisé Sans Espaces Blancs<br>
+							<small style="opacity: 0.8; font-weight: normal;">Recommandé - Utilise 90%+ de la page</small>
+						</button>
+						
+						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+							<button class="btn btn-primary" onclick="exportPDFFormatA3(); document.body.removeChild(this.closest('div').parentElement.parentElement);" 
+									style="padding: 12px; font-size: 14px;">
+								📄 A3 Portrait<br>
+								<small style="opacity: 0.8;">Standard bureau</small>
+							</button>
+							
+							<button class="btn btn-info" onclick="exportPDFFormatA4(); document.body.removeChild(this.closest('div').parentElement.parentElement);" 
+									style="padding: 12px; font-size: 14px;">
+								📄 A4 Portrait<br>
+								<small style="opacity: 0.8;">Compact</small>
+							</button>
+						</div>
+						
+						<button class="btn btn-warning" onclick="document.body.removeChild(this.parentElement.parentElement); showCompleteExportSelector();" 
+								style="padding: 10px; font-size: 13px;">
+							📥 Voir tous les formats (PNG, SVG, HTML...)
+						</button>
+						
+						<details style="margin-top: 15px; text-align: left;">
+							<summary style="cursor: pointer; font-weight: 600; color: #6c757d;">🔧 Options avancées</summary>
+							<div style="margin-top: 10px; display: grid; gap: 8px;">
+								<button class="btn btn-secondary" onclick="exportPreviewAsHighResPDF(); document.body.removeChild(this.closest('div').parentElement.parentElement);" 
+										style="padding: 8px; font-size: 12px;">
+									🧪 Standard (debug)
+								</button>
+								<button class="btn btn-secondary" onclick="diagnosePDFIssues();" 
+										style="padding: 8px; font-size: 12px;">
+									🔍 Diagnostic
+								</button>
+							</div>
+						</details>
+					</div>
+					
+					<button class="btn btn-light" onclick="document.body.removeChild(this.parentElement.parentElement);" 
+							style="margin-top: 15px; border: 1px solid #dee2e6;">
+						Annuler
+					</button>
+				</div>
+			`;
+			
+			document.body.appendChild(modal);
+		}
+
+		/**
+		 * Export A3 optimisé
+		 */
+		async function exportPDFFormatA3() {
+			await exportPDFFormat('a3', 'portrait');
+		}
+
+		/**
+		 * Export A4 optimisé  
+		 */
+		async function exportPDFFormatA4() {
+			await exportPDFFormat('a4', 'portrait');
+		}
+
+		/**
+		 * Fonction générique d'export pour différents formats
+		 */
+		async function exportPDFFormat(format, orientation) {
+			showNotification(`🖨️ Export ${format.toUpperCase()} ${orientation}...`, 'info');
+			
+			try {
+				const preview = document.getElementById('preview-container');
+				const originalWidth = preview.style.width;
+				
+				// Adapter la largeur selon le format
+				const width = format === 'a4' ? "1000px" : "1300px";
+				preview.style.width = width;
+				preview.style.maxWidth = width;
+				
+				await new Promise(resolve => setTimeout(resolve, 300));
+
+				const canvas = await html2canvas(preview, {
+					scale: 2.5,
+					useCORS: true,
+					backgroundColor: '#ffffff',
+					width: parseInt(width)
+				});
+
+				const { jsPDF } = window.jspdf;
+				const pdf = new jsPDF({
+					orientation: orientation,
+					unit: 'mm',
+					format: format
+				});
+
+				const pageWidth = pdf.internal.pageSize.getWidth();
+				const pageHeight = pdf.internal.pageSize.getHeight();
+				
+				// Utiliser 95% de la page avec marges
+				const margin = format === 'a4' ? 8 : 10;
+				const maxWidth = pageWidth - (margin * 2);
+				const maxHeight = pageHeight - (margin * 2);
+				
+				// Convertir et redimensionner
+				const mmPerPx = 0.264583;
+				const imgWidthMM = canvas.width * mmPerPx;
+				const imgHeightMM = canvas.height * mmPerPx;
+				
+				const scale = Math.min(maxWidth / imgWidthMM, maxHeight / imgHeightMM);
+				const finalWidth = imgWidthMM * scale;
+				const finalHeight = imgHeightMM * scale;
+				
+				const x = (pageWidth - finalWidth) / 2;
+				const y = (pageHeight - finalHeight) / 2;
+
+				const imgData = canvas.toDataURL('image/png', 0.95);
+				pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
+
+				const projectName = document.getElementById('project-name').value || 'infographie';
+				const filename = `${projectName.replace(/[^a-zA-Z0-9]/g, '_')}_${format}_${new Date().toISOString().split('T')[0]}.pdf`;
+				pdf.save(filename);
+
+				showNotification(`✅ PDF ${format.toUpperCase()} généré avec succès`, 'success');
+
+				preview.style.width = originalWidth;
+				setTimeout(() => renderPreview(), 200);
+
+			} catch (error) {
+				console.error(`❌ Erreur export ${format}:`, error);
+				showNotification(`❌ Erreur : ${error.message}`, 'error');
+			}
+		}
+
+		/**
+		 * Fonction de diagnostic pour identifier le problème
+		 */
+		function diagnosePDFIssues() {
+			console.log('🔍 DIAGNOSTIC PDF');
+			console.log('================');
+			
+			// Vérifier les bibliothèques
+			console.log('📚 Bibliothèques:');
+			console.log('- jsPDF:', typeof window.jspdf !== 'undefined' ? '✅' : '❌');
+			console.log('- html2canvas:', typeof html2canvas !== 'undefined' ? '✅' : '❌');
+			
+			// Vérifier l'élément
+			const preview = document.getElementById('preview-container');
+			console.log('🎯 Élément preview:');
+			console.log('- Trouvé:', !!preview ? '✅' : '❌');
+			
+			if (preview) {
+				const rect = preview.getBoundingClientRect();
+				console.log('- Dimensions:', rect.width, 'x', rect.height);
+				console.log('- Position:', rect.left, rect.top);
+				console.log('- Visible:', rect.width > 0 && rect.height > 0 ? '✅' : '❌');
+				console.log('- Enfants:', preview.children.length);
+				console.log('- Contenu:', preview.innerHTML.length, 'caractères');
+				
+				// Vérifier les styles
+				const computedStyle = window.getComputedStyle(preview);
+				console.log('- Display:', computedStyle.display);
+				console.log('- Visibility:', computedStyle.visibility);
+				console.log('- Opacity:', computedStyle.opacity);
+			}
+			
+			console.log('================');
+			console.log('💡 Utilisez testPDFExport() pour un test simple');
+		}
+
+		// Fonction de test pour vérifier que jsPDF est chargé
+		function testPDFLibrary() {
+			if (typeof window.jspdf === 'undefined') {
+				showNotification('⚠️ Bibliothèque jsPDF non chargée. Ajoutez le script dans votre HTML.', 'error');
+				console.error('jsPDF non trouvé. Ajoutez le script jsPDF dans votre HTML');
+				return false;
+			}
+			return true;
+		}
 
        // ========================================
        // INITIALISATION DE L'APPLICATION
@@ -3650,1339 +4775,13 @@ ${cssCustomization.includeReset ? `
            }
        });
 	   
-	   </script>
-	   
-	   //Imprimer le contenu sur du papier ou en PDF
-
-	   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-
-		<script>
-
-		//Impression en tant qu'image
-		function printAsImage() {
-			const preview = document.getElementById("preview-container");
-			const formatSelect = document.getElementById("print-format");
-			const selectedFormat = formatSelect.value;
-
-			// Afficher un indicateur de chargement
-			showNotification('Génération de l\'aperçu d\'impression en cours...', 'info');
-
-			// Dimensions pour l'impression (en pixels à 96 DPI)
-			const formatSizes = {
-				"A4-portrait": { width: 794, height: 1123, name: "A4 Portrait" },
-				"A4-landscape": { width: 1123, height: 794, name: "A4 Paysage" },
-				"A3-portrait": { width: 1123, height: 1587, name: "A3 Portrait" },
-				"A3-landscape": { width: 1587, height: 1123, name: "A3 Paysage" }
-			};
-
-			const format = formatSizes[selectedFormat];
-			
-			// Créer un clone temporaire pour forcer la mise en page
-			const tempContainer = preview.cloneNode(true);
-			tempContainer.style.position = 'absolute';
-			tempContainer.style.left = '-9999px';
-			tempContainer.style.top = '0';
-			tempContainer.style.width = format.width + 'px';
-			tempContainer.style.visibility = 'hidden';
-			
-			// Forcer la grille des étapes à rester en multi-colonnes
-			const stepsGrid = tempContainer.querySelector('.preview-steps-grid');
-			if (stepsGrid) {
-				// Ajuster la grille selon le format
-				if (selectedFormat.includes('portrait')) {
-					stepsGrid.style.gridTemplateColumns = 'repeat(1, 1fr)';
-				} else {
-					// Paysage : 2 colonnes
-					stepsGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
-				}
-				stepsGrid.style.gap = '30px';
-			}
-			
-			// Ajuster d'autres éléments pour l'impression
-			const container = tempContainer.querySelector('.preview-container');
-			if (container) {
-				container.style.maxWidth = '100%';
-				container.style.margin = '0';
-				container.style.boxShadow = 'none';
-			}
-			
-			// Ajouter temporairement au DOM
-			document.body.appendChild(tempContainer);
-			
-			// Options pour html2canvas avec une meilleure qualité
-			const html2canvasOptions = {
-				useCORS: true,
-				scale: 2, // Augmenter la résolution pour une meilleure qualité d'impression
-				backgroundColor: "#ffffff",
-				logging: false,
-				width: format.width,
-				height: tempContainer.scrollHeight,
-				windowWidth: format.width,
-				windowHeight: tempContainer.scrollHeight
-			};
-
-			// Capturer le clone au lieu de l'original
-			html2canvas(tempContainer, html2canvasOptions).then(canvas => {
-				// Supprimer le clone temporaire
-				document.body.removeChild(tempContainer);
-				// Calculer les dimensions pour l'ajustement
-				const imgWidth = canvas.width;
-				const imgHeight = canvas.height;
-				const pageWidth = format.width;
-				const pageHeight = format.height;
-				
-				// Calculer le ratio pour que l'image tienne sur une page
-				const widthRatio = pageWidth / imgWidth;
-				const heightRatio = pageHeight / imgHeight;
-				const ratio = Math.min(widthRatio, heightRatio) * 0.95; // 0.95 pour laisser des marges
-				
-				// Dimensions finales de l'image
-				const finalWidth = imgWidth * ratio;
-				const finalHeight = imgHeight * ratio;
-				
-				// Créer un nouveau canvas aux dimensions de la page
-				const pageCanvas = document.createElement('canvas');
-				pageCanvas.width = pageWidth;
-				pageCanvas.height = pageHeight;
-				const ctx = pageCanvas.getContext('2d');
-				
-				// Fond blanc
-				ctx.fillStyle = '#ffffff';
-				ctx.fillRect(0, 0, pageWidth, pageHeight);
-				
-				// Centrer l'image sur la page
-				const x = (pageWidth - finalWidth) / 2;
-				const y = (pageHeight - finalHeight) / 2;
-				
-				// Dessiner l'image redimensionnée et centrée
-				ctx.drawImage(canvas, x, y, finalWidth, finalHeight);
-				
-				// Convertir en image
-				const imgData = pageCanvas.toDataURL("image/png");
-				
-				// Créer la fenêtre d'impression avec des styles optimisés
-				const printWindow = window.open('', '_blank');
-				
-				// CSS d'impression optimisé pour forcer une seule page
-				const printStyles = `
-					<style>
-						@page {
-							size: ${selectedFormat.includes('portrait') ? 'portrait' : 'landscape'};
-							margin: 0;
-						}
-						
-						@media print {
-							* {
-								margin: 0 !important;
-								padding: 0 !important;
-							}
-							
-							html, body {
-								height: 100%;
-								width: 100%;
-								margin: 0;
-								padding: 0;
-								overflow: hidden;
-							}
-							
-							.print-container {
-								width: 100%;
-								height: 100vh;
-								display: flex;
-								align-items: center;
-								justify-content: center;
-								page-break-after: avoid;
-								page-break-inside: avoid;
-							}
-							
-							img {
-								max-width: 100%;
-								max-height: 100vh;
-								width: auto;
-								height: auto;
-								object-fit: contain;
-							}
-						}
-						
-						/* Styles pour l'aperçu à l'écran */
-						body {
-							margin: 0;
-							padding: 0;
-							background: #f0f0f0;
-							font-family: Arial, sans-serif;
-						}
-						
-						.header {
-							background: #333;
-							color: white;
-							padding: 15px;
-							text-align: center;
-							box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-						}
-						
-						.header h2 {
-							margin: 0;
-							font-size: 18px;
-						}
-						
-						.header p {
-							margin: 5px 0 0 0;
-							font-size: 14px;
-							opacity: 0.8;
-						}
-						
-						.print-container {
-							padding: 20px;
-							text-align: center;
-						}
-						
-						.print-preview {
-							background: white;
-							box-shadow: 0 0 20px rgba(0,0,0,0.1);
-							display: inline-block;
-							padding: 20px;
-							margin: 20px auto;
-						}
-						
-						img {
-							max-width: 90vw;
-							max-height: 80vh;
-							width: auto;
-							height: auto;
-						}
-						
-						.print-button {
-							background: #0056b3;
-							color: white;
-							border: none;
-							padding: 12px 30px;
-							font-size: 16px;
-							border-radius: 5px;
-							cursor: pointer;
-							margin: 20px;
-							transition: background 0.3s;
-						}
-						
-						.print-button:hover {
-							background: #003d82;
-						}
-						
-						.format-info {
-							background: #e9ecef;
-							padding: 10px 20px;
-							border-radius: 5px;
-							display: inline-block;
-							margin: 10px;
-							font-size: 14px;
-							color: #495057;
-						}
-					</style>
-				`;
-				
-				// HTML de la fenêtre d'impression
-				printWindow.document.write(`
-					<!DOCTYPE html>
-					<html lang="fr">
-					<head>
-						<meta charset="UTF-8">
-						<meta name="viewport" content="width=device-width, initial-scale=1.0">
-						<title>Aperçu avant impression - ${format.name}</title>
-						${printStyles}
-					</head>
-					<body>
-						<div class="header">
-							<h2>📄 Aperçu avant impression</h2>
-							<p>Infographie Cybersécurité - Format ${format.name}</p>
-						</div>
-						<div class="format-info">
-							ℹ️ L'image sera automatiquement ajustée pour tenir sur une seule page ${format.name}
-						</div>
-						<div class="print-container">
-							<div class="print-preview">
-								<img src="${imgData}" alt="Infographie cybersécurité" />
-							</div>
-						</div>
-						<div style="text-align: center; padding-bottom: 30px;">
-							<button class="print-button" onclick="window.print()">
-								🖨️ Lancer l'impression
-							</button>
-							<button class="print-button" style="background: #6c757d;" onclick="window.close()">
-								❌ Fermer
-							</button>
-						</div>
-					</body>
-					</html>
-				`);
-				
-				printWindow.document.close();
-				showNotification('Aperçu d\'impression généré avec succès', 'success');
-				
-			}).catch(error => {
-				console.error('Erreur lors de la capture:', error);
-				showNotification('Erreur lors de la génération de l\'aperçu : ' + error.message, 'error');
-			});
-		}
-
-		// Fonction améliorée avec prévisualisation de la mise en page
-		function printWithPreview() {
-			const formatSelect = document.getElementById("print-format");
-			const selectedFormat = formatSelect.value;
-			
-			// Dimensions pour l'impression
-			const formatSizes = {
-				"A4-portrait": { width: 210, height: 297, cols: 1, name: "A4 Portrait" },
-				"A4-landscape": { width: 297, height: 210, cols: 2, name: "A4 Paysage" },
-				"A3-portrait": { width: 297, height: 420, cols: 2, name: "A3 Portrait" },
-				"A3-landscape": { width: 420, height: 297, cols: 3, name: "A3 Paysage" }
-			};
-			
-			const format = formatSizes[selectedFormat];
-			
-			// Créer une fenêtre de prévisualisation
-			const previewWindow = window.open('', '_blank');
-			
-			// Récupérer toutes les données nécessaires
-			const mainTitle = document.getElementById('main-title').value;
-			const mainSubtitle = document.getElementById('main-subtitle').value;
-			const emergencyMessage = document.getElementById('emergency-message').value;
-			const footerMessage = document.getElementById('footer-message').value;
-			
-			// Couleurs
-			const headerColor = document.getElementById('header-color').value;
-			const timelineColor = document.getElementById('timeline-color').value;
-			const stepNumberColor = document.getElementById('step-number-color').value;
-			const footerColor = document.getElementById('footer-color').value;
-			const emergencyColor = document.getElementById('emergency-color').value;
-			const contentBgColor = document.getElementById('content-bg-color').value;
-			const stepBgColor = document.getElementById('step-bg-color').value;
-			
-			// Logo
-			const logoSrc = logoData.url || logoData.file;
-			const logoHtml = logoSrc && logoData.position ? 
-				`<img src="${logoSrc}" class="logo ${logoData.position}" style="max-width: ${logoData.size}px;">` : '';
-			
-			// Générer le HTML optimisé pour l'impression
-			const printHTML = `
-				<!DOCTYPE html>
-				<html lang="fr">
-				<head>
-					<meta charset="UTF-8">
-					<title>Impression - ${mainTitle}</title>
-					<style>
-						@page {
-							size: ${format.width}mm ${format.height}mm;
-							margin: 10mm;
-						}
-						
-						* {
-							margin: 0;
-							padding: 0;
-							box-sizing: border-box;
-						}
-						
-						body {
-							font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-							color: #2c3e50;
-							background: white;
-							font-size: 14px;
-							line-height: 1.5;
-						}
-						
-						/* Header */
-						.header {
-							background: linear-gradient(135deg, ${headerColor}, ${adjustBrightness(headerColor, -20)});
-							color: white;
-							text-align: center;
-							padding: 30px 20px;
-							position: relative;
-							margin-bottom: 20px;
-						}
-						
-						.header h1 {
-							font-size: 2.5em;
-							font-weight: 900;
-							margin-bottom: 10px;
-							text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-						}
-						
-						.header p {
-							font-size: 1.1em;
-							opacity: 0.95;
-						}
-						
-						.logo {
-							position: absolute;
-							max-height: 80px;
-						}
-						
-						.logo.top-left { top: 20px; left: 20px; }
-						.logo.top-right { top: 20px; right: 20px; }
-						.logo.top-center { top: 20px; left: 50%; transform: translateX(-50%); }
-						.logo.bottom-left { bottom: 20px; left: 20px; }
-						.logo.bottom-right { bottom: 20px; right: 20px; }
-						.logo.bottom-center { bottom: 20px; left: 50%; transform: translateX(-50%); }
-						
-						/* Timeline */
-						.timeline {
-							display: flex;
-							justify-content: center;
-							align-items: center;
-							margin: 20px 0;
-							flex-wrap: wrap;
-						}
-						
-						.timeline-item {
-							background: ${timelineColor};
-							color: white;
-							padding: 10px 20px;
-							border-radius: 25px;
-							margin: 5px;
-							font-weight: 700;
-						}
-						
-						.timeline-separator {
-							color: ${timelineColor};
-							padding: 5px;
-							font-size: 1.2em;
-						}
-						
-						/* Steps Grid - Layout optimisé pour l'impression */
-						.steps-grid {
-							display: grid;
-							grid-template-columns: repeat(${format.cols}, 1fr);
-							gap: 30px 25px; /* Plus d'espace vertical */
-							padding: 35px 20px 20px 20px; /* Plus de padding en haut */
-							margin-bottom: 20px;
-						}
-						
-						/* Conteneur wrapper pour chaque étape */
-						.step-wrapper {
-							position: relative;
-							padding-top: 15px; /* Espace pour le numéro qui déborde */
-						}
-						
-						.step {
-							background: ${stepBgColor};
-							border-radius: 15px;
-							padding: 25px;
-							padding-top: 40px; /* Espace pour le numéro */
-							border-left: 6px solid;
-							position: relative;
-							page-break-inside: avoid;
-							break-inside: avoid;
-							overflow: visible;
-							margin-top: 15px; /* Petite marge pour s'assurer que le numéro ne touche pas le bord */
-						}
-						
-						.step.immediate { border-left-color: ${classificationsData.critical.color}; }
-						.step.management { border-left-color: ${stepNumberColor}; }
-						.step.communication { border-left-color: ${classificationsData.important.color}; }
-						.step.continuity { border-left-color: ${classificationsData.success.color}; }
-						
-						.step-number {
-							position: absolute;
-							top: -8px; /* Légèrement décalé mais pas trop */
-							left: 20px; /* Retour à gauche comme dans l'aperçu */
-							background: ${stepNumberColor};
-							color: white;
-							width: 40px;
-							height: 40px;
-							border-radius: 50%;
-							display: flex;
-							align-items: center;
-							justify-content: center;
-							font-weight: 900;
-							font-size: 1.2em;
-							box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-							z-index: 10;
-							border: 3px solid ${stepBgColor}; /* Bordure blanche pour éviter la coupure visuelle */
-						}
-						
-						.step-icon {
-							font-size: 3em;
-							margin-bottom: 15px;
-							display: block;
-						}
-						
-						.step h3 {
-							font-size: 1.3em;
-							margin-bottom: 15px;
-							color: #2c3e50;
-							font-weight: 800;
-						}
-						
-						.action-item {
-							padding: 12px;
-							border-radius: 8px;
-							margin: 10px 0;
-							border-left: 4px solid;
-							font-size: 0.9em;
-						}
-						
-						.action-item.critical {
-							border-left-color: ${classificationsData.critical.color};
-							background: ${hexToRgba(classificationsData.critical.color, 0.1)};
-						}
-						
-						.action-item.important {
-							border-left-color: ${classificationsData.important.color};
-							background: ${hexToRgba(classificationsData.important.color, 0.1)};
-						}
-						
-						.action-item.info {
-							border-left-color: ${classificationsData.info.color};
-							background: ${hexToRgba(classificationsData.info.color, 0.1)};
-						}
-						
-						.action-item.success {
-							border-left-color: ${classificationsData.success.color};
-							background: ${hexToRgba(classificationsData.success.color, 0.1)};
-						}
-						
-						.action-item img {
-							max-width: 100%;
-							height: auto;
-							margin: 10px 0;
-							border-radius: 4px;
-						}
-						
-						/* Alternative : Layout avec numéro intégré pour éviter les coupures */
-						.step::before {
-							content: '';
-							position: absolute;
-							top: -10px;
-							left: 0;
-							right: 0;
-							height: 20px;
-							background: transparent;
-						}
-						.emergency-contact {
-							background: ${emergencyColor};
-							color: white;
-							padding: 25px;
-							border-radius: 10px;
-							margin: 20px;
-							text-align: center;
-							font-size: 1.1em;
-							font-weight: 700;
-						}
-						
-						/* Footer */
-						.footer {
-							background: ${footerColor};
-							color: white;
-							text-align: center;
-							padding: 30px 20px;
-							position: relative;
-						}
-						
-						.footer p {
-							margin-bottom: 10px;
-						}
-						
-						@media print {
-							body {
-								print-color-adjust: exact;
-								-webkit-print-color-adjust: exact;
-							}
-							
-							.no-print {
-								display: none !important;
-							}
-						}
-						
-						/* Contrôles d'impression */
-						.print-controls {
-							text-align: center;
-							padding: 20px;
-							background: #f8f9fa;
-							border-bottom: 2px solid #dee2e6;
-						}
-						
-						.print-controls button {
-							background: #0056b3;
-							color: white;
-							border: none;
-							padding: 10px 25px;
-							margin: 0 10px;
-							border-radius: 5px;
-							cursor: pointer;
-							font-size: 16px;
-						}
-						
-						.print-controls button:hover {
-							background: #003d82;
-						}
-						
-						.format-info {
-							background: #e3f2fd;
-							padding: 15px;
-							margin: 20px;
-							border-radius: 8px;
-							text-align: center;
-							border: 1px solid #1976d2;
-						}
-					</style>
-				</head>
-				<body>
-					<div class="print-controls no-print">
-						<h2>Aperçu d'impression - Format ${format.name}</h2>
-						<div class="format-info">
-							<strong>ℹ️ Mise en page optimisée :</strong> ${format.cols} colonne(s) pour les étapes
-						</div>
-						<button onclick="window.print()">🖨️ Imprimer</button>
-						<button onclick="window.close()" style="background: #6c757d;">❌ Fermer</button>
-					</div>
-					
-					<div class="container">
-						<div class="header">
-							${logoData.position && logoData.position.startsWith('top') ? logoHtml : ''}
-							<h1>${escapeHtml(mainTitle)}</h1>
-							<p>${escapeHtml(mainSubtitle)}</p>
-						</div>
-						
-						<div class="timeline">
-							${timelineData.map(item => 
-								item.type === 'item' 
-									? `<div class="timeline-item">${escapeHtml(item.text)}</div>`
-									: `<div class="timeline-separator">${escapeHtml(item.text)}</div>`
-							).join('')}
-						</div>
-						
-						<div class="steps-grid">
-							${stepsData.map(step => `
-								<div class="step ${step.category}">
-									<div class="step-number">${step.number}</div>
-									<div class="step-icon">${escapeHtml(step.icon)}</div>
-									<h3>${escapeHtml(step.title)}</h3>
-									<div class="step-content">
-										${step.actions.map(action => {
-											const imageSrc = action.image?.url || action.image?.file;
-											const imageHtml = imageSrc ? 
-												`<img src="${imageSrc}" style="max-width: ${action.image.width}px;">` : '';
-											
-											return `
-												<div class="action-item ${action.type}">
-													${action.image?.position === 'above' ? imageHtml : ''}
-													${sanitizeHtml(action.text)}
-													${action.image?.position === 'below' ? imageHtml : ''}
-												</div>
-											`;
-										}).join('')}
-									</div>
-								</div>
-							`).join('')}
-						</div>
-						
-						<div class="emergency-contact">
-							${escapeHtml(emergencyMessage)}
-						</div>
-						
-						<div class="footer">
-							${logoData.position && logoData.position.startsWith('bottom') ? logoHtml : ''}
-							${footerMessage.split('\n').map(line => `<p>${escapeHtml(line)}</p>`).join('')}
-						</div>
-					</div>
-				</body>
-				</html>
-			`;
-			
-			previewWindow.document.write(printHTML);
-			previewWindow.document.close();
-			
-			showNotification('Aperçu d\'impression généré avec mise en page optimisée', 'success');
-		}
-		
-		// Fonction d'impression avec adaptation intelligente du contenu
-		function printOnSinglePage() {
-			const formatSelect = document.getElementById("print-format");
-			const selectedFormat = formatSelect.value;
-			
-			// Analyser le contenu pour déterminer la complexité
-			const stepCount = stepsData.length;
-			const totalActions = stepsData.reduce((sum, step) => sum + step.actions.length, 0);
-			const avgActionsPerStep = totalActions / stepCount;
-			const maxActionsPerStep = Math.max(...stepsData.map(step => step.actions.length));
-			const totalTextLength = stepsData.reduce((sum, step) => 
-				sum + step.actions.reduce((actionSum, action) => actionSum + action.text.length, 0), 0
-			);
-			const hasLongText = stepsData.some(step => 
-				step.actions.some(action => action.text.length > 150)
-			);
-			const hasImages = stepsData.some(step => 
-				step.actions.some(action => action.image)
-			);
-			
-			// Calculer le score de densité du contenu
-			const contentDensity = (totalTextLength / 1000) + (totalActions * 2) + (hasImages ? 10 : 0);
-			
-			// Configuration adaptative selon le format et le contenu
-			const formatConfigs = {
-				"A4-portrait": {
-					width: 210,
-					height: 297,
-					baseColumns: 1,
-					maxColumns: 2,
-					name: "A4 Portrait",
-					baseFontSize: 12,
-					minFontSize: 9,
-					actionMinFont: 8,
-					densityThreshold: 20
-				},
-				"A4-landscape": {
-					width: 297,
-					height: 210,
-					baseColumns: 2,
-					maxColumns: 3,
-					name: "A4 Paysage",
-					baseFontSize: 11,
-					minFontSize: 8,
-					actionMinFont: 7,
-					densityThreshold: 25
-				},
-				"A3-portrait": {
-					width: 297,
-					height: 420,
-					baseColumns: 2,
-					maxColumns: 4,
-					name: "A3 Portrait",
-					baseFontSize: 16,
-					minFontSize: 11,
-					actionMinFont: 10,
-					densityThreshold: 40
-				},
-				"A3-landscape": {
-					width: 420,
-					height: 297,
-					baseColumns: 3,
-					maxColumns: 5,
-					name: "A3 Paysage",
-					baseFontSize: 14,
-					minFontSize: 10,
-					actionMinFont: 9,
-					densityThreshold: 35
-				}
-			};
-			
-			const config = formatConfigs[selectedFormat];
-			
-			// Adapter le nombre de colonnes selon la densité
-			let optimalColumns = config.baseColumns;
-			if (contentDensity > config.densityThreshold) {
-				optimalColumns = Math.min(
-					config.maxColumns,
-					Math.ceil(stepCount / Math.ceil(maxActionsPerStep / 3))
-				);
-			}
-			
-			// Calculer les dimensions
-			const pageWidthMM = config.width - 10;
-			const pageHeightMM = config.height - 10;
-			
-			// Hauteurs des sections (réduites pour plus d'espace)
-			const headerHeightMM = 20;
-			const timelineHeightMM = 10;
-			const emergencyHeightMM = 12;
-			const footerHeightMM = 15;
-			
-			const stepsHeightMM = pageHeightMM - headerHeightMM - timelineHeightMM - emergencyHeightMM - footerHeightMM;
-			const rowsNeeded = Math.ceil(stepCount / optimalColumns);
-			const stepHeightMM = (stepsHeightMM - (rowsNeeded - 1) * 3) / rowsNeeded;
-			
-			// Calculer la taille de police optimale
-			const densityFactor = Math.min(1, config.densityThreshold / contentDensity);
-			const fontSize = Math.max(
-				config.minFontSize,
-				config.baseFontSize * densityFactor
-			);
-			const actionFontSize = Math.max(
-				config.actionMinFont,
-				fontSize * 0.85
-			);
-			
-			// Créer la fenêtre
-			const previewWindow = window.open('', '_blank');
-			
-			// Récupérer les données
-			const mainTitle = document.getElementById('main-title').value;
-			const mainSubtitle = document.getElementById('main-subtitle').value;
-			const emergencyMessage = document.getElementById('emergency-message').value;
-			const footerMessage = document.getElementById('footer-message').value;
-			
-			const headerColor = document.getElementById('header-color').value;
-			const timelineColor = document.getElementById('timeline-color').value;
-			const stepNumberColor = document.getElementById('step-number-color').value;
-			const footerColor = document.getElementById('footer-color').value;
-			const emergencyColor = document.getElementById('emergency-color').value;
-			const contentBgColor = document.getElementById('content-bg-color').value;
-			const stepBgColor = document.getElementById('step-bg-color').value;
-			
-			const logoSrc = logoData.url || logoData.file;
-			const logoSize = Math.min(logoData.size, 60);
-			const logoHtml = logoSrc && logoData.position ? 
-				`<img src="${logoSrc}" class="logo ${logoData.position}" style="max-width: ${logoSize}px;">` : '';
-			
-			// HTML optimisé
-			const printHTML = `
-				<!DOCTYPE html>
-				<html lang="fr">
-				<head>
-					<meta charset="UTF-8">
-					<title>Impression - ${mainTitle}</title>
-					<style>
-						@page {
-							size: ${config.width}mm ${config.height}mm;
-							margin: 5mm;
-						}
-						
-						* {
-							margin: 0;
-							padding: 0;
-							box-sizing: border-box;
-						}
-						
-						html, body {
-							width: 100%;
-							height: 100vh;
-							overflow: hidden;
-							margin: 0;
-							padding: 0;
-						}
-						
-						body {
-							font-family: 'Segoe UI', Arial, sans-serif;
-							color: #2c3e50;
-							background: white;
-							font-size: ${fontSize}px;
-							line-height: 1.3;
-						}
-						
-						/* Conteneur principal */
-						.page-container {
-							width: 100vw;
-							height: 100vh;
-							display: flex;
-							flex-direction: column;
-							overflow: hidden;
-						}
-						
-						/* Header compact */
-						.header {
-							background: linear-gradient(135deg, ${headerColor}, ${adjustBrightness(headerColor, -20)});
-							color: white;
-							text-align: center;
-							padding: 8px 10px;
-							position: relative;
-							flex: 0 0 ${headerHeightMM}mm;
-							display: flex;
-							flex-direction: column;
-							justify-content: center;
-						}
-						
-						.header h1 {
-							font-size: 2em;
-							font-weight: 900;
-							margin-bottom: 3px;
-							text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-							line-height: 1;
-						}
-						
-						.header p {
-							font-size: 0.9em;
-							opacity: 0.95;
-							margin: 0;
-							line-height: 1.2;
-						}
-						
-						.logo {
-							position: absolute;
-							max-height: 50px;
-						}
-						
-						.logo.top-left { top: 5px; left: 10px; }
-						.logo.top-right { top: 5px; right: 10px; }
-						.logo.top-center { top: 5px; left: 50%; transform: translateX(-50%); }
-						.logo.bottom-left { bottom: 5px; left: 10px; }
-						.logo.bottom-right { bottom: 5px; right: 10px; }
-						.logo.bottom-center { bottom: 5px; left: 50%; transform: translateX(-50%); }
-						
-						/* Timeline compacte */
-						.timeline {
-							display: flex;
-							justify-content: center;
-							align-items: center;
-							padding: 4px;
-							flex: 0 0 ${timelineHeightMM}mm;
-							gap: 4px;
-							flex-wrap: wrap;
-						}
-						
-						.timeline-item {
-							background: ${timelineColor};
-							color: white;
-							padding: 3px 10px;
-							border-radius: 15px;
-							font-weight: 700;
-							font-size: 0.8em;
-							white-space: nowrap;
-						}
-						
-						.timeline-separator {
-							color: ${timelineColor};
-							font-size: 1em;
-						}
-						
-						/* Container des étapes */
-						.steps-container {
-							flex: 1 1 auto;
-							min-height: 0;
-							padding: 3px;
-							overflow: hidden;
-						}
-						
-						/* Grille adaptative */
-						.steps-grid {
-							width: 100%;
-							height: 100%;
-							display: grid;
-							grid-template-columns: repeat(${optimalColumns}, 1fr);
-							grid-auto-rows: 1fr;
-							gap: 3px;
-						}
-						
-						/* Étapes optimisées - FORCER l'affichage complet */
-						.step {
-							background: ${stepBgColor};
-							border-radius: 8px;
-							padding: 8px 6px;
-							padding-top: 25px;
-							border-left: 4px solid;
-							position: relative;
-							display: flex;
-							flex-direction: column;
-							min-height: 0;
-							height: 100%;
-						}
-						
-						.step.immediate { border-left-color: ${classificationsData.critical.color}; }
-						.step.management { border-left-color: ${stepNumberColor}; }
-						.step.communication { border-left-color: ${classificationsData.important.color}; }
-						.step.continuity { border-left-color: ${classificationsData.success.color}; }
-						
-						.step-number {
-							position: absolute;
-							top: 3px;
-							left: 6px;
-							background: ${stepNumberColor};
-							color: white;
-							width: 24px;
-							height: 24px;
-							border-radius: 50%;
-							display: flex;
-							align-items: center;
-							justify-content: center;
-							font-weight: 900;
-							font-size: 0.9em;
-							z-index: 10;
-						}
-						
-						.step-icon {
-							font-size: 1.8em;
-							margin-bottom: 3px;
-							display: block;
-							text-align: center;
-							flex: 0 0 auto;
-							line-height: 1;
-						}
-						
-						.step h3 {
-							font-size: 1em;
-							margin-bottom: 4px;
-							color: #2c3e50;
-							font-weight: 800;
-							line-height: 1;
-							text-align: center;
-							flex: 0 0 auto;
-						}
-						
-						/* Contenu avec gestion du débordement */
-						.step-content {
-							flex: 1 1 auto;
-							min-height: 0;
-							overflow-y: auto;
-							overflow-x: hidden;
-							font-size: ${actionFontSize}px;
-							display: flex;
-							flex-direction: column;
-							gap: 2px;
-							padding-right: 2px;
-						}
-						
-						/* Scrollbar très fine */
-						@media screen {
-							.step-content {
-								scrollbar-width: thin;
-								scrollbar-color: rgba(0,0,0,0.2) transparent;
-							}
-							
-							.step-content::-webkit-scrollbar {
-								width: 2px;
-							}
-							
-							.step-content::-webkit-scrollbar-track {
-								background: transparent;
-							}
-							
-							.step-content::-webkit-scrollbar-thumb {
-								background: rgba(0,0,0,0.2);
-								border-radius: 2px;
-							}
-						}
-						
-						/* Actions ultra-compactes avec retour à la ligne forcé */
-						.action-item {
-							padding: 4px 5px;
-							border-radius: 3px;
-							border-left: 2px solid;
-							font-size: ${Math.max(0.85, actionFontSize / fontSize)}em;
-							line-height: 1.2;
-							flex: 0 0 auto;
-							word-wrap: break-word !important;
-							overflow-wrap: break-word !important;
-							word-break: break-word !important;
-							hyphens: auto;
-							white-space: normal !important;
-							display: block;
-						}
-						
-						.action-item.critical {
-							border-left-color: ${classificationsData.critical.color};
-							background: ${hexToRgba(classificationsData.critical.color, 0.08)};
-						}
-						
-						.action-item.important {
-							border-left-color: ${classificationsData.important.color};
-							background: ${hexToRgba(classificationsData.important.color, 0.08)};
-						}
-						
-						.action-item.info {
-							border-left-color: ${classificationsData.info.color};
-							background: ${hexToRgba(classificationsData.info.color, 0.08)};
-						}
-						
-						.action-item.success {
-							border-left-color: ${classificationsData.success.color};
-							background: ${hexToRgba(classificationsData.success.color, 0.08)};
-						}
-						
-						/* Gestion du texte */
-						.action-item strong {
-							font-weight: 700;
-						}
-						
-						.action-item ul,
-						.action-item li {
-							margin-left: 12px;
-							line-height: 1.2;
-						}
-						
-						/* Images adaptatives */
-						.action-item img {
-							max-width: 100%;
-							max-height: ${contentDensity > 30 ? '50px' : '80px'};
-							height: auto;
-							margin: 4px auto;
-							border-radius: 3px;
-							display: block;
-						}
-						
-						/* Emergency compact */
-						.emergency-contact {
-							background: ${emergencyColor};
-							color: white;
-							padding: 6px 15px;
-							text-align: center;
-							font-size: 0.9em;
-							font-weight: 700;
-							flex: 0 0 ${emergencyHeightMM}mm;
-							display: flex;
-							align-items: center;
-							justify-content: center;
-							line-height: 1.2;
-						}
-						
-						/* Footer compact */
-						.footer {
-							background: ${footerColor};
-							color: white;
-							text-align: center;
-							padding: 6px 10px;
-							position: relative;
-							flex: 0 0 ${footerHeightMM}mm;
-							display: flex;
-							flex-direction: column;
-							justify-content: center;
-						}
-						
-						.footer p {
-							margin: 1px 0;
-							font-size: 0.8em;
-							line-height: 1.2;
-						}
-						
-						/* Ajustements pour contenu très dense */
-						${contentDensity > 35 ? `
-							.step { padding: 8px 6px; padding-top: 25px; }
-							.step-icon { font-size: 1.8em; margin-bottom: 3px; }
-							.step h3 { font-size: 1em; margin-bottom: 4px; }
-							.action-item { padding: 4px; font-size: 0.9em; }
-							.step-number { width: 25px; height: 25px; font-size: 0.9em; }
-						` : ''}
-						
-						@media print {
-							html, body, .page-container {
-								width: 100% !important;
-								height: 100% !important;
-								margin: 0 !important;
-								padding: 0 !important;
-							}
-							
-							.no-print {
-								display: none !important;
-							}
-							
-							/* FORCER l'affichage de tout le contenu à l'impression */
-							.step-content {
-								overflow: visible !important;
-								max-height: none !important;
-								height: auto !important;
-							}
-							
-							.step {
-								overflow: visible !important;
-								height: auto !important;
-								min-height: 0 !important;
-							}
-							
-							.steps-grid {
-								grid-auto-rows: auto !important;
-							}
-							
-							body {
-								print-color-adjust: exact;
-								-webkit-print-color-adjust: exact;
-							}
-							
-							/* Réduction extrême si nécessaire */
-							${contentDensity > 40 ? `
-								.action-item { 
-									font-size: ${Math.max(6, actionFontSize * 0.8)}px !important; 
-									padding: 2px 3px !important; 
-									line-height: 1.1 !important;
-								}
-								.step { 
-									padding: 5px 4px !important; 
-									padding-top: 20px !important; 
-								}
-								.step-icon {
-									font-size: 1.4em !important;
-									margin-bottom: 2px !important;
-								}
-								.step h3 {
-									font-size: 0.9em !important;
-									margin-bottom: 3px !important;
-								}
-							` : ''}
-						}
-						
-						/* Mode debug pour voir les problèmes */
-						.debug-info {
-							position: fixed;
-							bottom: 10px;
-							right: 10px;
-							background: rgba(0,0,0,0.8);
-							color: white;
-							padding: 10px;
-							border-radius: 5px;
-							font-size: 11px;
-							z-index: 1000;
-						}
-					</style>
-				</head>
-				<body>
-					<div class="print-controls no-print" style="text-align: center; padding: 20px; background: #f8f9fa;">
-						<h2>🖨️ Aperçu d'impression adaptatif</h2>
-						<div style="background: #e3f2fd; padding: 15px; margin: 20px auto; max-width: 600px; border-radius: 8px;">
-							<strong>📊 Analyse du contenu :</strong><br>
-							Format : ${config.name} • ${stepCount} étapes sur ${optimalColumns} colonnes<br>
-							Densité : ${contentDensity.toFixed(0)} • Police : ${fontSize.toFixed(1)}px / Actions : ${actionFontSize.toFixed(1)}px<br>
-							<small style="color: #666;">💡 Colonnes adaptées automatiquement selon le contenu</small>
-						</div>
-						<button onclick="window.print()" style="background: #0056b3; color: white; border: none; padding: 12px 30px; font-size: 16px; border-radius: 5px; cursor: pointer; margin: 10px;">
-							🖨️ Imprimer
-						</button>
-						<button onclick="toggleDebug()" style="background: #ff9800; color: white; border: none; padding: 12px 30px; font-size: 16px; border-radius: 5px; cursor: pointer; margin: 10px;">
-							🔍 Debug
-						</button>
-						<button onclick="window.close()" style="background: #6c757d; color: white; border: none; padding: 12px 30px; font-size: 16px; border-radius: 5px; cursor: pointer; margin: 10px;">
-							❌ Fermer
-						</button>
-					</div>
-					
-					<div class="page-container">
-						<div class="header">
-							${logoData.position && logoData.position.startsWith('top') ? logoHtml : ''}
-							<h1>${escapeHtml(mainTitle)}</h1>
-							<p>${escapeHtml(mainSubtitle)}</p>
-						</div>
-						
-						<div class="timeline">
-							${timelineData.map(item => 
-								item.type === 'item' 
-									? `<div class="timeline-item">${escapeHtml(item.text)}</div>`
-									: `<div class="timeline-separator">${escapeHtml(item.text)}</div>`
-							).join('')}
-						</div>
-						
-						<div class="steps-container">
-							<div class="steps-grid">
-								${stepsData.map((step, index) => `
-									<div class="step ${step.category}" data-step="${index}">
-										<div class="step-number">${step.number}</div>
-										<div class="step-icon">${escapeHtml(step.icon)}</div>
-										<h3>${escapeHtml(step.title)}</h3>
-										<div class="step-content" data-actions="${step.actions.length}">
-											${step.actions.map((action, actionIndex) => {
-												const imageSrc = action.image?.url || action.image?.file;
-												const imageHtml = imageSrc ? 
-													`<img src="${imageSrc}" alt="Image">` : '';
-												
-												return `
-													<div class="action-item ${action.type}" data-action="${actionIndex}">
-														${action.image?.position === 'above' ? imageHtml : ''}
-														${sanitizeHtml(action.text)}
-														${action.image?.position === 'below' ? imageHtml : ''}
-													</div>
-												`;
-											}).join('')}
-										</div>
-									</div>
-								`).join('')}
-							</div>
-						</div>
-						
-						<div class="emergency-contact">
-							${escapeHtml(emergencyMessage)}
-						</div>
-						
-						<div class="footer">
-							${logoData.position && logoData.position.startsWith('bottom') ? logoHtml : ''}
-							${footerMessage.split('\n').map(line => `<p>${escapeHtml(line)}</p>`).join('')}
-						</div>
-					</div>
-					
-					<div class="debug-info no-print" id="debugInfo" style="display: none;">
-						<strong>Debug Info:</strong><br>
-						Steps: ${stepCount}<br>
-						Columns: ${optimalColumns}<br>
-						Row height: ${stepHeightMM.toFixed(0)}mm<br>
-						Density: ${contentDensity.toFixed(0)}<br>
-						Font: ${fontSize.toFixed(1)}px
-					</div>
-					
-					<script>
-						function toggleDebug() {
-							const debug = document.getElementById('debugInfo');
-							debug.style.display = debug.style.display === 'none' ? 'block' : 'none';
-							
-							// Afficher les infos de débordement
-							document.querySelectorAll('.step-content').forEach((content, i) => {
-								if (content.scrollHeight > content.clientHeight) {
-									console.log('Étape ' + (i + 1) + ' déborde de ' + (content.scrollHeight - content.clientHeight) + 'px');
-								}
-							});
-						}
-						
-						// Vérifier les débordements au chargement
-						window.onload = function() {
-							let hasOverflow = false;
-							let totalHiddenHeight = 0;
-							
-							document.querySelectorAll('.step-content').forEach((content, i) => {
-								const step = content.closest('.step');
-								const stepTitle = step.querySelector('h3').textContent;
-								
-								if (content.scrollHeight > content.clientHeight) {
-									hasOverflow = true;
-									const hiddenHeight = content.scrollHeight - content.clientHeight;
-									totalHiddenHeight += hiddenHeight;
-									
-									content.style.borderRight = '3px solid orange';
-									console.warn('Étape "' + stepTitle + '" : ' + hiddenHeight + 'px de contenu masqué');
-									
-									// Compter les actions visibles vs totales
-									const totalActions = content.querySelectorAll('.action-item').length;
-									let visibleActions = 0;
-									content.querySelectorAll('.action-item').forEach(action => {
-										const rect = action.getBoundingClientRect();
-										const containerRect = content.getBoundingClientRect();
-										if (rect.top >= containerRect.top && rect.bottom <= containerRect.bottom) {
-											visibleActions++;
-										}
-									});
-									
-									if (visibleActions < totalActions) {
-										console.warn('  → ' + visibleActions + '/' + totalActions + ' actions visibles');
-									}
-								}
-							});
-							
-							if (hasOverflow) {
-								console.error('⚠️ ATTENTION : ' + totalHiddenHeight + 'px de contenu total masqué !');
-								console.info('💡 Utilisez la molette ou le trackpad pour faire défiler le contenu dans l\'aperçu.');
-								console.info('💡 À l\'impression, essayez de réduire le contenu ou d\'augmenter le nombre de colonnes.');
-							} else {
-								console.log('✅ Tout le contenu est visible');
-							}
-						};
-					<\/script>
-				</body>
-				</html>
-			`;
-			
-			previewWindow.document.write(printHTML);
-			previewWindow.document.close();
-			
-			showNotification(`Aperçu généré - ${optimalColumns} colonnes, police ${fontSize.toFixed(0)}px`, 'success');
-		}
-				
+   
        /**
         * ========================================
         * FIN DU GÉNÉRATEUR COMPLET
         * ========================================
-        * 
-        * 🎯 Fonctionnalités complètes implémentées:
-        * ✅ Interface complète avec FAQ détaillées
-        * ✅ Personnalisation avancée des couleurs et arrière-plans
-        * ✅ Gestion complète des logos (drag&drop, URL, positions)
-        * ✅ Classifications d'actions personnalisables
-        * ✅ Timeline interactive avec séparateurs
-        * ✅ Éditeur d'étapes avec formatage de texte
-        * ✅ Sélecteur d'icônes avec 70+ options
-        * ✅ Thèmes prédéfinis
-        * ✅ Sauvegarde/chargement de projets
-        * ✅ Export HTML autonome optimisé
-        * ✅ Interface responsive et accessible
-        * ✅ Tooltips et aide contextuelle
-        * ✅ Notifications utilisateur
-        * ✅ Raccourcis clavier
-        * ✅ Licence open source clairement définie
-        * 
-        * Version: 2.0 - Code complet et fonctionnel
-        * Libre pour usage public et personnel
-        * Licence commerciale requise pour entreprises privées
-        */
+        **/
+		
    </script>
 </body>
 </html>
