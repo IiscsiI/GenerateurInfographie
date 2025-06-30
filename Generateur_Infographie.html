@@ -404,39 +404,82 @@
         }
         
         /* === SÉLECTEUR D'ICÔNES === */
-        .icon-selector {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 8px;
-            max-height: 200px;
-            overflow-y: auto;
-            border: 2px solid var(--primary-color);
-            border-radius: 12px;
-            padding: 15px;
-            background: white;
-            box-shadow: var(--box-shadow);
-        }
-        
-        .icon-option {
-            padding: 12px;
-            text-align: center;
-            cursor: pointer;
-            border-radius: var(--border-radius);
-            font-size: 24px;
-            transition: var(--transition);
-            background: var(--light-color);
-        }
-        
-        .icon-option:hover {
-            background: var(--primary-color);
-            color: white;
-            transform: scale(1.1);
-        }
-        
-        .icon-option.selected {
-            background: var(--primary-color);
-            color: white;
-        }
+
+		.icon-selector {
+			position: fixed;
+			z-index: 10001;
+			left: 50%;
+			top: 50%;
+			transform: translate(-50%, -50%);
+			background: white;
+			border: 2px solid var(--primary-color);
+			border-radius: 12px;
+			padding: 20px;
+			box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+			max-width: 450px;
+			width: 90%;
+			max-height: 80vh;
+			display: none;
+			pointer-events: auto;
+		}
+
+		.icon-selector.active {
+			display: block;
+		}
+
+		.icon-selector h3 {
+			margin-bottom: 15px;
+			color: #2c3e50;
+			text-align: center;
+		}
+
+		.icon-selector .icon-grid {
+			display: grid;
+			grid-template-columns: repeat(8, 1fr);
+			gap: 10px;
+			max-height: 400px;
+			overflow-y: auto;
+			padding: 10px 0;
+		}
+
+		.icon-option {
+			padding: 15px;
+			text-align: center;
+			cursor: pointer;
+			border-radius: 8px;
+			font-size: 24px;
+			transition: all 0.2s ease;
+			background: #f8f9fa;
+			pointer-events: auto;
+			user-select: none;
+		}
+
+		.icon-option:hover {
+			background: var(--primary-color);
+			color: white;
+			transform: scale(1.1);
+		}
+
+		.icon-selector-overlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0,0,0,0.5);
+			z-index: 10000;
+			display: none;
+			pointer-events: auto;
+		}
+
+		.icon-selector-overlay.active {
+			display: block;
+		}
+
+		.step-icon-input.active {
+			border-color: var(--primary-color);
+			box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.2);
+		}
 
         /* === TIMELINE === */
         .timeline-editor {
@@ -1263,23 +1306,23 @@
                 <div class="color-customization">
                     <div class="color-grid">
                         <div class="color-input-group">
-                            <input type="color" id="header-color" class="color-input" value="#dc3545" onchange="renderPreview(); autoSave();">
+                            <input type="color" id="header-color" class="color-input" value="#dc3545" onchange="renderPreview(); autoSave(); updatePreviewColors();">
                             <label class="color-label">En-tête</label>
                         </div>
                         <div class="color-input-group">
-                            <input type="color" id="timeline-color" class="color-input" value="#3498db" onchange="renderPreview(); autoSave();">
+                            <input type="color" id="timeline-color" class="color-input" value="#3498db" onchange="renderPreview(); autoSave(); updatePreviewColors();">
                             <label class="color-label">Timeline</label>
                         </div>
                         <div class="color-input-group">
-                            <input type="color" id="step-number-color" class="color-input" value="#0056b3" onchange="renderPreview(); autoSave();">
+                            <input type="color" id="step-number-color" class="color-input" value="#0056b3" onchange="renderPreview(); autoSave(); updatePreviewColors();">
                             <label class="color-label">Numéros étapes</label>
                         </div>
                         <div class="color-input-group">
-                            <input type="color" id="footer-color" class="color-input" value="#2c3e50" onchange="renderPreview(); autoSave();">
+                            <input type="color" id="footer-color" class="color-input" value="#2c3e50" onchange="renderPreview(); autoSave(); updatePreviewColors();">
                             <label class="color-label">Pied de page</label>
                         </div>
                         <div class="color-input-group">
-                            <input type="color" id="emergency-color" class="color-input" value="#ff6b6b" onchange="renderPreview(); autoSave();">
+                            <input type="color" id="emergency-color" class="color-input" value="#ff6b6b" onchange="renderPreview(); autoSave(); updatePreviewColors();">
                             <label class="color-label">Message urgence</label>
                         </div>
                     </div>
@@ -1291,19 +1334,19 @@
                 <div class="background-customization">
                     <div class="color-grid">
                         <div class="color-input-group">
-                            <input type="color" id="body-bg-color" class="color-input" value="#f8f9fa" onchange="renderPreview(); autoSave();">
+                            <input type="color" id="body-bg-color" class="color-input" value="#f8f9fa" onchange="renderPreview(); autoSave(); updatePreviewColors();">
                             <label class="color-label">Arrière-plan général</label>
                         </div>
                         <div class="color-input-group">
-                            <input type="color" id="content-bg-color" class="color-input" value="#ffffff" onchange="renderPreview(); autoSave();">
+                            <input type="color" id="content-bg-color" class="color-input" value="#ffffff" onchange="renderPreview(); autoSave(); updatePreviewColors();">
                             <label class="color-label">Contenu principal</label>
                         </div>
                         <div class="color-input-group">
-                            <input type="color" id="step-bg-color" class="color-input" value="#ffffff" onchange="renderPreview(); autoSave();">
+                            <input type="color" id="step-bg-color" class="color-input" value="#ffffff" onchange="renderPreview(); autoSave(); updatePreviewColors();">
                             <label class="color-label">Cartes étapes</label>
                         </div>
                         <div class="color-input-group">
-                            <input type="color" id="preview-bg-color" class="color-input" value="#f8f9fa" onchange="renderPreview(); autoSave();">
+                            <input type="color" id="preview-bg-color" class="color-input" value="#f8f9fa" onchange="renderPreview(); autoSave(); updatePreviewColors();">
                             <label class="color-label">Zone d'aperçu</label>
                         </div>
                     </div>
@@ -1331,22 +1374,22 @@
                 <div class="color-customization">
                     <div class="color-grid">
                         <div class="color-input-group">
-                            <input type="color" id="critical-color" class="color-input" value="#e74c3c" onchange="updateClassificationColor('critical', this.value)">
+                            <input type="color" id="critical-color" class="color-input" value="#e74c3c" onchange="updateClassificationColor('critical', this.value); updatePreviewColors();">
                             <input type="text" id="critical-name" value="Critique" onchange="updateClassificationName('critical', this.value)" 
                                    style="margin-top: 8px; width: 100%; padding: 6px; font-size: 12px; text-align: center; border-radius: 4px; border: 1px solid #ddd;">
                         </div>
                         <div class="color-input-group">
-                            <input type="color" id="important-color" class="color-input" value="#f39c12" onchange="updateClassificationColor('important', this.value)">
+                            <input type="color" id="important-color" class="color-input" value="#f39c12" onchange="updateClassificationColor('important', this.value); updatePreviewColors();">
                             <input type="text" id="important-name" value="Important" onchange="updateClassificationName('important', this.value)" 
                                    style="margin-top: 8px; width: 100%; padding: 6px; font-size: 12px; text-align: center; border-radius: 4px; border: 1px solid #ddd;">
                         </div>
                         <div class="color-input-group">
-                            <input type="color" id="info-color" class="color-input" value="#3498db" onchange="updateClassificationColor('info', this.value)">
+                            <input type="color" id="info-color" class="color-input" value="#3498db" onchange="updateClassificationColor('info', this.value); updatePreviewColors();">
                             <input type="text" id="info-name" value="Info" onchange="updateClassificationName('info', this.value)" 
                                    style="margin-top: 8px; width: 100%; padding: 6px; font-size: 12px; text-align: center; border-radius: 4px; border: 1px solid #ddd;">
                         </div>
                         <div class="color-input-group">
-                            <input type="color" id="success-color" class="color-input" value="#27ae60" onchange="updateClassificationColor('success', this.value)">
+                            <input type="color" id="success-color" class="color-input" value="#27ae60" onchange="updateClassificationColor('success', this.value); updatePreviewColors();">
                             <input type="text" id="success-name" value="Succès" onchange="updateClassificationName('success', this.value)" 
                                    style="margin-top: 8px; width: 100%; padding: 6px; font-size: 12px; text-align: center; border-radius: 4px; border: 1px solid #ddd;">
                         </div>
@@ -1532,23 +1575,69 @@ Cette procédure doit être affichée et connue de tous les collaborateurs</text
          * Options visuelles pour connecter les étapes
          */
         const availableSeparators = [
-            { value: "↓", label: "Flèche bas ↓" },
-            { value: "→", label: "Flèche droite →" },
-            { value: "⬇️", label: "Flèche bas emoji ⬇️" },
-            { value: "➡️", label: "Flèche droite emoji ➡️" },
-            { value: "▼", label: "Triangle bas ▼" },
-            { value: "►", label: "Triangle droite ►" },
-            { value: "⤵️", label: "Courbe bas ⤵️" },
-            { value: "🔽", label: "Bouton bas 🔽" },
-            { value: "⏬", label: "Double flèche ⏬" },
-            { value: "⭐", label: "Étoile ⭐" },
-            { value: "🔸", label: "Losange 🔸" },
-            { value: "▪️", label: "Carré ▪️" },
-            { value: "•", label: "Puce •" },
-            { value: "...", label: "Points de suspension ..." },
-            { value: "puis", label: "Texte 'puis'" },
-            { value: "⟩", label: "Chevron ⟩" }
-        ];
+			{ value: "↓", label: "Flèche bas ↓" },
+			{ value: "→", label: "Flèche droite →" },
+			{ value: "⬇️", label: "Flèche bas emoji ⬇️" },
+			{ value: "➡️", label: "Flèche droite emoji ➡️" },
+			{ value: "▼", label: "Triangle bas ▼" },
+			{ value: "►", label: "Triangle droite ►" },
+			{ value: "⤵️", label: "Courbe bas ⤵️" },
+			{ value: "🔽", label: "Bouton bas 🔽" },
+			{ value: "⏬", label: "Double flèche ⏬" },
+			{ value: "⭐", label: "Étoile ⭐" },
+			{ value: "🔸", label: "Losange 🔸" },
+			{ value: "▪️", label: "Carré ▪️" },
+			{ value: "•", label: "Puce •" },
+			{ value: "...", label: "Points de suspension ..." },
+			{ value: "puis", label: "Texte 'puis'" },
+			{ value: "⟩", label: "Chevron ⟩" },
+			{ value: "⚡", label: "Éclair ⚡" },
+			{ value: "🔄", label: "Cycle 🔄" },
+			{ value: "⏰", label: "Horloge ⏰" },
+			{ value: "🎯", label: "Cible 🎯" },
+			{ value: "📍", label: "Épingle 📍" },
+			{ value: "🔹", label: "Losange bleu 🔹" },
+			{ value: "🔺", label: "Triangle rouge 🔺" },
+			{ value: "⬆️", label: "Flèche haut ⬆️" },
+			{ value: "↪️", label: "Flèche courbe ↪️" },
+			{ value: "🔃", label: "Flèches courbes 🔃" },
+			{ value: "⏭️", label: "Suivant ⏭️" },
+			{ value: "▶️", label: "Play ▶️" },
+			{ value: "◀️", label: "Retour ◀️" },
+			{ value: "⏸️", label: "Pause ⏸️" },
+			{ value: "⏹️", label: "Stop ⏹️" },
+			{ value: "🟢", label: "Point vert 🟢" },
+			{ value: "🟡", label: "Point jaune 🟡" },
+			{ value: "🔴", label: "Point rouge 🔴" },
+			{ value: "⚫", label: "Point noir ⚫" },
+			{ value: "◽", label: "Carré blanc ◽" },
+			{ value: "◾", label: "Carré noir ◾" },
+			{ value: "➕", label: "Plus ➕" },
+			{ value: "➖", label: "Moins ➖" },
+			{ value: "✔️", label: "Check ✔️" },
+			{ value: "❌", label: "Croix ❌" },
+			{ value: "🔔", label: "Cloche 🔔" },
+			{ value: "⚠️", label: "Attention ⚠️" }
+		];
+
+		//Gestion du Timeout
+		const timeoutManager = {
+			autoSave: null,
+			resize: null,
+			notification: null,
+			
+			clear(type) {
+				if (this[type]) {
+					clearTimeout(this[type]);
+					this[type] = null;
+				}
+			},
+			
+			set(type, callback, delay) {
+				this.clear(type);
+				this[type] = setTimeout(callback, delay);
+			}
+		};
 
         /**
          * Configuration des thèmes prédéfinis
@@ -1605,6 +1694,106 @@ Cette procédure doit être affichée et connue de tous les collaborateurs</text
             }
         };
 		
+		// ========================================
+		// GESTION DU SÉLECTEUR D'ICÔNES GLOBAL
+		// ========================================
+
+		// Variable globale pour stocker l'index de l'étape active
+		let activeStepIndex = null;
+
+		/**
+		 * Initialise le sélecteur d'icônes au démarrage
+		 */
+		function initializeIconSelector() {
+			const iconGrid = document.querySelector('.icon-selector .icon-grid');
+			if (!iconGrid) {
+				console.warn('Grid du sélecteur d\'icônes non trouvée');
+				return;
+			}
+			
+			// Générer les icônes
+			iconGrid.innerHTML = availableIcons.map(icon => 
+				`<div class="icon-option" onclick="selectIcon('${icon}')" title="${icon}">${icon}</div>`
+			).join('');
+			
+			// Ajouter un bouton de fermeture
+			const closeBtn = document.createElement('button');
+			closeBtn.innerHTML = '✕';
+			closeBtn.style.cssText = `
+				position: absolute;
+				top: 10px;
+				right: 10px;
+				background: none;
+				border: none;
+				font-size: 24px;
+				cursor: pointer;
+				color: #6c757d;
+			`;
+			closeBtn.onclick = hideIconSelector;
+			document.querySelector('.icon-selector').appendChild(closeBtn);
+			
+			console.log('✅ Sélecteur d\'icônes initialisé avec', availableIcons.length, 'icônes');
+		}
+
+		/**
+		 * Ouvre le sélecteur pour un input spécifique
+		 */
+		function openIconSelectorForInput(input, stepIndex) {
+			// Retirer la classe active de tous les inputs
+			document.querySelectorAll('.step-icon-input').forEach(el => el.classList.remove('active'));
+			
+			// Marquer l'input actif
+			input.classList.add('active');
+			
+			// Stocker l'index de l'étape
+			activeStepIndex = stepIndex;
+			
+			// Afficher le sélecteur
+			showIconSelector();
+		}
+
+		/**
+		 * Affiche le sélecteur d'icônes
+		 */
+		function showIconSelector() {
+			const overlay = document.querySelector('.icon-selector-overlay');
+			const selector = document.querySelector('.icon-selector');
+			
+			if (overlay && selector) {
+				overlay.classList.add('active');
+				selector.classList.add('active');
+			}
+		}
+
+		/**
+		 * Masque le sélecteur d'icônes
+		 */
+		function hideIconSelector() {
+			const overlay = document.querySelector('.icon-selector-overlay');
+			const selector = document.querySelector('.icon-selector');
+			
+			if (overlay && selector) {
+				overlay.classList.remove('active');
+				selector.classList.remove('active');
+			}
+			
+			// Retirer la classe active de l'input
+			document.querySelectorAll('.step-icon-input').forEach(el => el.classList.remove('active'));
+			
+			activeStepIndex = null;
+		}
+
+		/**
+		 * Sélectionne une icône
+		 */
+		function selectIcon(icon) {
+			if (activeStepIndex !== null) {
+				updateStep(activeStepIndex, 'icon', icon);
+				showNotification(`Icône ${icon} sélectionnée`, 'success');
+			}
+			hideIconSelector();
+		}
+		
 		//Personnalisation complète du CSS
 		let cssCustomization = {
 			prefix: "",           // Préfixe pour toutes les classes
@@ -1617,10 +1806,15 @@ Cette procédure doit être affichée et connue de tous les collaborateurs</text
 		 * Met à jour le préfixe CSS
 		 */
 		function updateCssPrefix(prefix) {
-			// Valider le préfixe (lettres, chiffres, tirets)
-			if (prefix && !/^[a-zA-Z0-9-]+$/.test(prefix)) {
-				showNotification('Le préfixe doit contenir uniquement des lettres, chiffres et tirets', 'error');
-				return;
+			if (prefix) {
+				if (!/^[a-zA-Z][a-zA-Z0-9-]*$/.test(prefix)) {
+					showNotification('Le préfixe doit commencer par une lettre', 'error');
+					return;
+				}
+				// Ajouter automatiquement le tiret si manquant
+				if (!prefix.endsWith('-')) {
+					prefix += '-';
+				}
 			}
 			cssCustomization.prefix = prefix;
 			renderPreview();
@@ -1648,6 +1842,20 @@ Cette procédure doit être affichée et connue de tous les collaborateurs</text
 		 */
 		function updateCustomCss(css) {
 			cssCustomization.customCss = css;
+			autoSave();
+		}
+		
+		/**
+		* Notification ID conteneur
+		*/
+		function updateCssContainer(container) {
+			if (container) {
+				// Ajouter # ou . si manquant
+				if (!/^[#.]/.test(container)) {
+					showNotification('Le conteneur doit commencer par # (ID) ou . (classe)', 'warning');
+				}
+			}
+			cssCustomization.container = container;
 			autoSave();
 		}
 
@@ -2092,6 +2300,10 @@ ${cssCustomization.includeReset ? `
             notification.textContent = message;
             notification.className = `notification ${type}`;
             
+			//Clear Timeout
+			if (window.autoSaveTimeout) clearTimeout(window.autoSaveTimeout);
+			if (window.resizeTimeout) clearTimeout(window.resizeTimeout);
+			
             // Afficher
             setTimeout(() => notification.classList.add('show'), 100);
             
@@ -2215,6 +2427,13 @@ ${cssCustomization.includeReset ? `
 				reader.onload = function(e) {
 					const img = new Image();
 					img.onload = function() {
+					
+						// Vérification du ratio de l'image pour éviter les déformation
+						const ratio = this.width / this.height;
+						if (ratio > 5 || ratio < 0.2) {
+							showNotification('⚠️ Image très allongée détectée', 'warning');
+						}
+					
 						// L'image est valide, continuer
 						if (!stepsData[stepIndex].actions[actionIndex].image) {
 							stepsData[stepIndex].actions[actionIndex].image = {
@@ -2409,6 +2628,13 @@ ${cssCustomization.includeReset ? `
 				reader.onload = function(e) {
 					const img = new Image();
 					img.onload = function() {
+					
+						// Vérification du ratio de l'image pour éviter les déformation
+						const ratio = this.width / this.height;
+						if (ratio > 5 || ratio < 0.2) {
+							showNotification('⚠️ Image très allongée détectée', 'warning');
+						}
+											
 						// L'image est valide
 						logoData.file = e.target.result;
 						logoData.url = "";
@@ -2508,22 +2734,24 @@ ${cssCustomization.includeReset ? `
          * @param {string} name - Nouveau nom
          */
         function updateClassificationName(type, name) {
-            classificationsData[type].name = name;
-            renderEditor();
-            renderPreview();
-            autoSave();
-        }
-
+			classificationsData[type].name = escapeHtml(name); // Sécurité ajoutée
+			renderEditor(); // Recharger l'éditeur pour mettre à jour les sélecteurs
+			renderPreview(); // AJOUTÉ : Mise à jour immédiate du preview
+			autoSave();
+		}
+		
         /**
          * Met à jour la couleur d'une classification
          * @param {string} type - Type de classification
          * @param {string} color - Nouvelle couleur (hex)
          */
         function updateClassificationColor(type, color) {
-            classificationsData[type].color = color;
-            renderPreview();
-            autoSave();
-        }
+			classificationsData[type].color = color;
+			renderEditor(); // AJOUTÉ : Recharger l'éditeur pour voir les nouvelles couleurs
+			renderPreview(); // AJOUTÉ : Mise à jour immédiate du preview
+			autoSave();
+		}
+
 
         // ========================================
         // GESTION DES LICENCES
@@ -2565,6 +2793,22 @@ ${cssCustomization.includeReset ? `
             b = b > 255 ? 255 : b < 0 ? 0 : b;
             return (usePound ? '#' : '') + (r << 16 | g << 8 | b).toString(16).padStart(6, '0');
         }
+		
+		
+		/**
+		* Met à jour les couleurs dans la prévisualisation
+		*/
+		function updatePreviewColors() {
+			// Mise à jour immédiate sans recalcul complet
+			const preview = document.querySelector('.preview-panel');
+			if (preview) {
+				const bodyBgColor = document.getElementById('body-bg-color').value;
+				const previewBgColor = document.getElementById('preview-bg-color').value;
+				
+				document.body.style.background = `linear-gradient(135deg, ${bodyBgColor} 0%, ${adjustBrightness(bodyBgColor, -10)} 100%)`;
+				preview.style.background = previewBgColor;
+			}
+		}
 
         /**
          * Convertit une couleur hexadécimale en RGBA
@@ -2619,7 +2863,7 @@ ${cssCustomization.includeReset ? `
 			}
 		}
 
-	// ========================================
+		// ========================================
         // GESTION DES ÉTAPES ET ACTIONS
         // ========================================
 
@@ -2644,16 +2888,9 @@ ${cssCustomization.includeReset ? `
 						<div style="position: relative;">
 							<div class="tooltip">
 								<input type="text" class="step-icon-input" value="${escapeHtml(step.icon)}" 
-									   onchange="updateStep(${stepIndex}, 'icon', this.value)" 
-									   onclick="showIconSelector(${stepIndex})" readonly 
+									   onclick="openIconSelectorForInput(this, ${stepIndex})" readonly 
 									   style="cursor: pointer;" title="Cliquer pour choisir une icône">
 								<span class="tooltiptext">Cliquez pour choisir une icône</span>
-							</div>
-							<div id="icon-selector-${stepIndex}" class="icon-selector" 
-								 style="display: none; position: absolute; top: 100%; left: 0; z-index: 1000;">
-								${availableIcons.map(icon => 
-									`<div class="icon-option" onclick="selectIcon(${stepIndex}, '${icon}')" title="${icon}">${icon}</div>`
-								).join('')}
 							</div>
 						</div>
 						<div style="flex: 1; margin-left: 15px;">
@@ -2909,31 +3146,7 @@ ${cssCustomization.includeReset ? `
             showNotification('Action supprimée', 'info');
         }
 
-        /**
-         * Affiche le sélecteur d'icônes pour une étape
-         * @param {number} stepIndex - Index de l'étape
-         */
-        function showIconSelector(stepIndex) {
-            // Fermer tous les autres sélecteurs
-            document.querySelectorAll('.icon-selector').forEach(selector => {
-                selector.style.display = 'none';
-            });
-            
-            // Ouvrir/fermer le sélecteur pour cette étape
-            const selector = document.getElementById(`icon-selector-${stepIndex}`);
-            selector.style.display = selector.style.display === 'none' ? 'grid' : 'none';
-        }
 
-        /**
-         * Sélectionne une icône pour une étape
-         * @param {number} stepIndex - Index de l'étape
-         * @param {string} icon - Icône sélectionnée
-         */
-        function selectIcon(stepIndex, icon) {
-            updateStep(stepIndex, 'icon', icon);
-            document.getElementById(`icon-selector-${stepIndex}`).style.display = 'none';
-            showNotification(`Icône ${icon} sélectionnée`, 'success');
-        }
 
         /**
          * Applique un formatage au texte sélectionné
@@ -3305,25 +3518,25 @@ ${cssCustomization.includeReset ? `
          */
         function resetProject() {
             if (confirm('Êtes-vous sûr de vouloir recommencer ? Toutes vos modifications seront perdues.')) {
-                // Réinitialisation des données par défaut
-                timelineData = [
-                    { text: "IMMÉDIAT", type: "item" },
-                    { text: "↓", type: "separator" },
-                    { text: "ALERTE", type: "item" },
-                    { text: "↓", type: "separator" },
-                    { text: "COMMUNICATION", type: "item" },
-                    { text: "↓", type: "separator" },
-                    { text: "CONTINUITÉ", type: "item" }
-                ];
-                
-                logoData = { url: "", file: "", position: "", size: 120 };
-                
-                classificationsData = {
-                    critical: { name: "Critique", color: "#e74c3c" },
-                    important: { name: "Important", color: "#f39c12" },
-                    info: { name: "Info", color: "#3498db" },
-                    success: { name: "Succès", color: "#27ae60" }
-                };
+				// Réinitialisation des données (existant)
+				timelineData = [
+					{ text: "IMMÉDIAT", type: "item" },
+					{ text: "↓", type: "separator" },
+					{ text: "ALERTE", type: "item" },
+					{ text: "↓", type: "separator" },
+					{ text: "COMMUNICATION", type: "item" },
+					{ text: "↓", type: "separator" },
+					{ text: "CONTINUITÉ", type: "item" }
+				];
+				
+				logoData = { url: "", file: "", position: "", size: 120 };
+				
+				classificationsData = {
+					critical: { name: "Critique", color: "#e74c3c" },
+					important: { name: "Important", color: "#f39c12" },
+					info: { name: "Info", color: "#3498db" },
+					success: { name: "Succès", color: "#27ae60" }
+				};
                 
                 stepsData = [
                     {
@@ -3364,17 +3577,46 @@ ${cssCustomization.includeReset ? `
                    }
                ];
                
-               // Réinitialisation des champs
-               document.getElementById('main-title').value = 'CYBERATTAQUE DÉTECTÉE';
-               document.getElementById('main-subtitle').value = 'Procédure d\'urgence - Actions immédiates à entreprendre';
-               document.getElementById('emergency-message').value = '🚨 EN CAS D\'URGENCE : Contactez immédiatement votre RSSI ou équipe cybersécurité 🚨';
-               document.getElementById('footer-message').value = 'RAPPEL IMPORTANT : Chaque minute compte en cas de cyberattaque\nCette procédure doit être affichée et connue de tous les collaborateurs';
-               document.getElementById('project-name').value = 'Mon infographie cyberattaque';
-               
-               // Appliquer le thème bleu par défaut
-               applyTheme('blue');
-               
-               showNotification('Projet réinitialisé', 'info');
+              // AJOUTÉ : Réinitialisation des personnalisations CSS
+				cssCustomization = {
+					prefix: "",
+					container: "",
+					includeReset: false,
+					customCss: ""
+				};
+				
+				// AJOUTÉ : Réinitialisation de tous les champs d'interface
+				document.getElementById('main-title').value = 'CYBERATTAQUE DÉTECTÉE';
+				document.getElementById('main-subtitle').value = 'Procédure d\'urgence - Actions immédiates à entreprendre';
+				document.getElementById('emergency-message').value = '🚨 EN CAS D\'URGENCE : Contactez immédiatement votre RSSI ou équipe cybersécurité 🚨';
+				document.getElementById('footer-message').value = 'RAPPEL IMPORTANT : Chaque minute compte en cas de cyberattaque\nCette procédure doit être affichée et connue de tous les collaborateurs';
+				document.getElementById('project-name').value = 'Mon infographie cyberattaque';
+				
+				// AJOUTÉ : Réinitialisation des champs CSS
+				document.getElementById('css-prefix').value = '';
+				document.getElementById('css-container').value = '';
+				document.getElementById('css-reset').checked = false;
+				document.getElementById('custom-css').value = '';
+				
+				// AJOUTÉ : Réinitialisation du logo
+				document.getElementById('logo-url').value = '';
+				document.getElementById('logo-position').value = '';
+				document.getElementById('logo-size').value = 120;
+				document.getElementById('logo-size-value').textContent = '120px';
+				const logoPreview = document.getElementById('logo-preview');
+				logoPreview.style.display = 'none';
+				logoPreview.src = '';
+				
+				// Appliquer le thème bleu par défaut
+				applyTheme('blue');
+				
+				// AJOUTÉ : Réinitialisation complète de l'interface
+				initializeClassifications();
+				renderTimelineEditor();
+				renderEditor();
+				renderPreview();
+				
+				showNotification('Projet réinitialisé', 'info');
            }
        }
 
@@ -3549,6 +3791,31 @@ ${cssCustomization.includeReset ? `
            document.getElementById('load-file').click();
        }
 	   
+	   
+	   // ========================================
+       // Export en PDF Diagnostic
+       // ========================================
+	   function quickPDFDiagnosis() {
+			console.log('📊 Analyse rapide PDF...');
+			diagnosePDFIssues();
+			
+			// Test rapide de génération
+			try {
+				const preview = document.getElementById('preview-container');
+				if (preview) {
+					console.log('✅ Élément preview trouvé');
+					console.log('📐 Dimensions:', preview.offsetWidth, 'x', preview.offsetHeight);
+				}
+				if (typeof window.jspdf !== 'undefined') {
+					console.log('✅ jsPDF chargé');
+				}
+				if (typeof html2canvas !== 'undefined') {
+					console.log('✅ html2canvas chargé');
+				}
+			} catch (e) {
+				console.error('❌ Erreur diagnostic:', e);
+			}
+		}
 	   
 	   // ========================================
        // Export en PDF pour impression
@@ -4466,7 +4733,7 @@ ${cssCustomization.includeReset ? `
 						<div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
 							<button class="btn btn-secondary" onclick="diagnosePDFIssues();" 
 									style="padding: 8px; font-size: 12px;">🔍 Diagnostic</button>
-							<button class="btn btn-secondary" onclick="diagnosePDFIssues();" 
+							<button class="btn btn-secondary" onclick="quickPDFDiagnosis();" 
 									style="padding: 8px; font-size: 12px;">📊 Analyse rapide</button>
 						</div>
 					</details>
@@ -4481,71 +4748,6 @@ ${cssCustomization.includeReset ? `
 			document.body.appendChild(modal);
 		}
 
-		/**
-		 * Sélecteur PDF simplifié (garde l'ancien pour compatibilité)
-		 */
-		function showSmartPDFSelector() {
-			const modal = document.createElement('div');
-			modal.style.cssText = `
-				position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-				background: rgba(0,0,0,0.7); display: flex; justify-content: center;
-				align-items: center; z-index: 30000;
-			`;
-			
-			modal.innerHTML = `
-				<div style="background: white; padding: 30px; border-radius: 15px; max-width: 550px; text-align: center;">
-					<h3 style="margin-bottom: 20px; color: #2c3e50;">📄 Export PDF</h3>
-					
-					<div style="display: grid; gap: 15px; margin: 20px 0;">
-						<button class="btn btn-success" onclick="exportPreviewAsPDFFullWidth(); document.body.removeChild(this.closest('div').parentElement);" 
-								style="padding: 18px; font-size: 16px; border-radius: 8px;">
-							✨ Optimisé Sans Espaces Blancs<br>
-							<small style="opacity: 0.8; font-weight: normal;">Recommandé - Utilise 90%+ de la page</small>
-						</button>
-						
-						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-							<button class="btn btn-primary" onclick="exportPDFFormatA3(); document.body.removeChild(this.closest('div').parentElement.parentElement);" 
-									style="padding: 12px; font-size: 14px;">
-								📄 A3 Portrait<br>
-								<small style="opacity: 0.8;">Standard bureau</small>
-							</button>
-							
-							<button class="btn btn-info" onclick="exportPDFFormatA4(); document.body.removeChild(this.closest('div').parentElement.parentElement);" 
-									style="padding: 12px; font-size: 14px;">
-								📄 A4 Portrait<br>
-								<small style="opacity: 0.8;">Compact</small>
-							</button>
-						</div>
-						
-						<button class="btn btn-warning" onclick="document.body.removeChild(this.parentElement.parentElement); showCompleteExportSelector();" 
-								style="padding: 10px; font-size: 13px;">
-							📥 Voir tous les formats (PNG, SVG, HTML...)
-						</button>
-						
-						<details style="margin-top: 15px; text-align: left;">
-							<summary style="cursor: pointer; font-weight: 600; color: #6c757d;">🔧 Options avancées</summary>
-							<div style="margin-top: 10px; display: grid; gap: 8px;">
-								<button class="btn btn-secondary" onclick="exportPreviewAsHighResPDF(); document.body.removeChild(this.closest('div').parentElement.parentElement);" 
-										style="padding: 8px; font-size: 12px;">
-									🧪 Standard (debug)
-								</button>
-								<button class="btn btn-secondary" onclick="diagnosePDFIssues();" 
-										style="padding: 8px; font-size: 12px;">
-									🔍 Diagnostic
-								</button>
-							</div>
-						</details>
-					</div>
-					
-					<button class="btn btn-light" onclick="document.body.removeChild(this.parentElement.parentElement);" 
-							style="margin-top: 15px; border: 1px solid #dee2e6;">
-						Annuler
-					</button>
-				</div>
-			`;
-			
-			document.body.appendChild(modal);
-		}
 
 		/**
 		 * Export A3 optimisé
@@ -4684,6 +4886,7 @@ ${cssCustomization.includeReset ? `
          /**
 		 * Point d'entrée principal - Initialisation complète
 		 */
+
 		function initializeApp() {
 			console.log('🚀 Initialisation du Générateur d\'Infographie Cybersécurité v2.0');
 			console.log('📄 Licence : AGPL-3.0 (usage public) / Commerciale (entreprises)');
@@ -4708,25 +4911,34 @@ ${cssCustomization.includeReset ? `
 				renderTimelineEditor();
 				renderEditor();
 				renderPreview();
+				// Initialiser le sélecteur d'icônes global
+				initializeIconSelector();
 				
 				// 4. Ensuite seulement, charger la sauvegarde automatique (qui écrasera les valeurs par défaut)
 				setTimeout(() => {
 					loadAutoSave();
 					// Re-rendre après le chargement de la sauvegarde
 					renderPreview();
+					// Initialiser le sélecteur d'icônes global
+					initializeIconSelector();
 				}, 100);
 				
 				// 5. Event listeners pour fermer les sélecteurs d'icônes
-				document.addEventListener('click', function(e) {
-					if (!e.target.closest('.step-icon-input') && !e.target.closest('.icon-selector')) {
-						document.querySelectorAll('.icon-selector').forEach(selector => {
-							selector.style.display = 'none';
-						});
+				document.addEventListener('keydown', function(e) {
+					if (e.key === 'Escape' && document.querySelector('.icon-selector.active')) {
+						hideIconSelector();
 					}
 				});
 
-				// 6. Raccourcis clavier
+				// 6. Raccourcis clavier (AMÉLIORÉ)
 				document.addEventListener('keydown', function(e) {
+					// Fermer les sélecteurs d'icônes avec Échap
+					if (e.key === 'Escape') {
+						hideIconSelector();
+						return;
+					}
+					
+					// Raccourcis de sauvegarde et export
 					if (e.ctrlKey && e.key === 's') {
 						e.preventDefault();
 						saveProjectToFile();
@@ -4741,7 +4953,108 @@ ${cssCustomization.includeReset ? `
 						e.preventDefault();
 						resetProject();
 					}
+					
+					// Raccourci pour export PDF
+					if (e.ctrlKey && e.key === 'p') {
+						e.preventDefault();
+						showCompleteExportSelector();
+					}
+					
+					// Raccourci pour aide
+					if (e.key === 'F1') {
+						e.preventDefault();
+						// Ouvrir la première FAQ automatiquement
+						toggleFaq('faq1');
+					}
 				});
+				
+				// 7. Event listeners pour l'auto-sauvegarde lors des changements
+				const autoSaveElements = [
+					'main-title', 'main-subtitle', 'emergency-message', 'footer-message',
+					'project-name', 'header-color', 'timeline-color', 'step-number-color',
+					'footer-color', 'emergency-color', 'body-bg-color', 'content-bg-color',
+					'step-bg-color', 'preview-bg-color', 'critical-color', 'important-color',
+					'info-color', 'success-color', 'critical-name', 'important-name',
+					'info-name', 'success-name', 'css-prefix', 'css-container', 'custom-css'
+				];
+				
+				autoSaveElements.forEach(elementId => {
+					const element = document.getElementById(elementId);
+					if (element) {
+						// Écouter les changements sur tous les types d'éléments
+						['input', 'change', 'blur'].forEach(eventType => {
+							element.addEventListener(eventType, () => {
+								// Délai pour éviter trop de sauvegardes
+								clearTimeout(window.autoSaveTimeout);
+								window.autoSaveTimeout = setTimeout(autoSave, 500);
+							});
+						});
+					}
+				});
+				
+				// 8. Gestion de la visibilité pour économiser les ressources
+				document.addEventListener('visibilitychange', function() {
+					if (document.hidden) {
+						autoSave();
+						// Fermer les sélecteurs ouverts si la page devient invisible
+						hideIconSelector();
+					}
+				});
+				
+				// 9. Sauvegarde automatique avant fermeture
+				window.addEventListener('beforeunload', function(e) {
+					autoSave();
+				});
+				
+				// 10. Gestion du redimensionnement de fenêtre
+				window.addEventListener('resize', function() {
+					// Fermer les sélecteurs lors du redimensionnement
+					hideIconSelector();
+					
+					// Re-rendre le preview après un délai
+					clearTimeout(window.resizeTimeout);
+					window.resizeTimeout = setTimeout(() => {
+						renderPreview();
+					}, 250);
+				});
+				
+				// 11. Initialisation des tooltips (si nécessaire)
+				const tooltips = document.querySelectorAll('.tooltip');
+				tooltips.forEach(tooltip => {
+					// Améliorer l'accessibilité des tooltips
+					tooltip.setAttribute('role', 'button');
+					tooltip.setAttribute('tabindex', '0');
+					
+					// Afficher le tooltip au focus pour l'accessibilité
+					tooltip.addEventListener('focus', function() {
+						const tooltipText = this.querySelector('.tooltiptext');
+						if (tooltipText) {
+							tooltipText.style.visibility = 'visible';
+							tooltipText.style.opacity = '1';
+						}
+					});
+					
+					tooltip.addEventListener('blur', function() {
+						const tooltipText = this.querySelector('.tooltiptext');
+						if (tooltipText) {
+							tooltipText.style.visibility = 'hidden';
+							tooltipText.style.opacity = '0';
+						}
+					});
+				});
+				
+				// 12. Vérification des bibliothèques externes
+				setTimeout(() => {
+					if (typeof html2canvas === 'undefined') {
+						console.warn('⚠️ html2canvas non chargé - Export PDF/Image indisponible');
+					}
+					if (typeof window.jspdf === 'undefined') {
+						console.warn('⚠️ jsPDF non chargé - Export PDF indisponible');
+					}
+				}, 1000);
+				
+				// 13. Initialisation des fonctionnalités avancées
+				initializeAdvancedFeatures();
 				
 				console.log('✅ Application initialisée avec succès');
 				showNotification('Générateur prêt à utiliser !', 'success');
@@ -4749,7 +5062,76 @@ ${cssCustomization.includeReset ? `
 			} catch (error) {
 				console.error('❌ Erreur lors de l\'initialisation:', error);
 				showNotification('Erreur lors de l\'initialisation', 'error');
+				
+				// Mode de récupération : essayer de charger au moins les fonctionnalités de base
+				try {
+					renderPreview();
+					console.log('🔄 Mode de récupération activé');
+				} catch (recoveryError) {
+					console.error('❌ Échec du mode de récupération:', recoveryError);
+				}
 			}
+		}
+
+
+
+		/**
+		 * Initialise les fonctionnalités avancées
+		 */
+		function initializeAdvancedFeatures() {
+			// Détecter le type d'appareil
+			const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+			const isTablet = /iPad|Android/i.test(navigator.userAgent) && window.innerWidth >= 768;
+			
+			if (isMobile && !isTablet) {
+				console.log('📱 Mode mobile détecté');
+				document.body.classList.add('mobile-device');
+				
+				// Ajustements pour mobile
+				const editorPanel = document.querySelector('.editor-panel');
+				if (editorPanel) {
+					editorPanel.style.width = '100%';
+				}
+			}
+			
+			// Détecter le mode sombre du système
+			if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+				console.log('🌙 Mode sombre du système détecté');
+				// Optionnel : appliquer automatiquement le thème sombre
+				// applyTheme('dark');
+			}
+			
+			// Surveiller les changements de mode sombre
+			if (window.matchMedia) {
+				window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+					console.log('🌓 Changement de mode sombre détecté:', e.matches ? 'sombre' : 'clair');
+				});
+			}
+			
+			// Géolocalisation pour les fuseaux horaires (optionnel)
+			try {
+				const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+				console.log('🌍 Fuseau horaire détecté:', timezone);
+			} catch (e) {
+				console.log('🌍 Impossible de détecter le fuseau horaire');
+			}
+			
+			// Vérifier la performance et ajuster si nécessaire
+			if (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4) {
+				console.log('⚡ Performances limitées détectées - Optimisations activées');
+				// Réduire les animations si nécessaire
+				document.documentElement.style.setProperty('--transition', 'all 0.1s ease');
+			}
+			
+			// Initialiser le cache des éléments fréquemment utilisés
+			window.cachedElements = {
+				previewContainer: document.getElementById('preview-container'),
+				stepsContainer: document.getElementById('steps-container'),
+				timelineContainer: document.getElementById('timeline-items-container'),
+				notification: document.getElementById('notification')
+			};
+			
+			console.log('🚀 Fonctionnalités avancées initialisées');
 		}
 
        // ========================================
@@ -4783,5 +5165,15 @@ ${cssCustomization.includeReset ? `
         **/
 		
    </script>
+   <!-- Overlay pour le sélecteur d'icônes -->
+	<div class="icon-selector-overlay" onclick="hideIconSelector()"></div>
+
+	<!-- Sélecteur d'icônes global -->
+	<div class="icon-selector">
+		<h3>Choisir une icône</h3>
+		<div class="icon-grid">
+			<!-- Les icônes seront générées dynamiquement -->
+		</div>
+	</div>
 </body>
 </html>
