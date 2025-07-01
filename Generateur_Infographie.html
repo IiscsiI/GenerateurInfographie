@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <!--
-    Générateur d'Infographie Cybersécurité v2.0
+    Générateur d'Infographie Cybersécurité v1.5.0
     Copyright (C) 2025 [Guillemin Pierre-Eric]
     
     This program is free software: you can redistribute it and/or modify
@@ -1554,70 +1554,310 @@ Cette procédure doit être affichée et connue de tous les collaborateurs</text
          * Collection de 70+ émojis organisés par catégorie
          */
         const availableIcons = [
-            // Technologie et informatique
-            "🖥️", "💻", "📱", "⌨️", "🖱️", "💾", "💿", "📀", "🔌", "🔋",
-            // Sécurité et alertes
-            "🛡️", "🔒", "🔓", "🚨", "⚠️", "🔥", "⛔", "🚫", "⭕", "❌",
-            // Communication et contact
-            "📞", "📧", "📨", "📬", "📢", "📣", "🔔", "🔕", "📻", "📡",
-            // Organisation et gestion
-            "👥", "👤", "👨‍💼", "👩‍💼", "🏢", "🏛️", "📋", "📊", "📈", "📉",
-            // Actions et processus
-            "✅", "❎", "⭐", "🎯", "🏃", "⏰", "⏱️", "⏲️", "🔄", "🔃",
-            // Documents et fichiers
-            "📝", "📄", "📃", "📑", "🗂️", "📁", "📂", "🗃️", "🗄️", "💼",
-            // Urgence et intervention
-            "🆘", "🚑", "🚒", "👮", "🕵️", "💡", "🔍", "🔎", "🔬", "⚙️"
-        ];
+			// === TECHNOLOGIE ET INFORMATIQUE ===
+			"🖥️", "💻", "📱", "⌨️", "🖱️", "🖨️", "📠", "💾", "💿", "📀", 
+			"🔌", "🔋", "📡", "📶", "📳", "📴", "🖲️", "🗄️", "🖧", "💽",
+			
+			// === SÉCURITÉ ET ALERTES ===
+			"🛡️", "🔒", "🔓", "🔏", "🔐", "🔑", "🗝️", "🚨", "⚠️", "⛔", 
+			"🚫", "❌", "⭕", "🛑", "🚸", "☢️", "☣️", "⚡", "🔥", "💥",
+			
+			// === COMMUNICATION ET CONTACT ===
+			"📞", "☎️", "📲", "📧", "📨", "📩", "📤", "📥", "📫", "📬", 
+			"📭", "📮", "✉️", "📢", "📣", "🔔", "🔕", "📯", "📻", "📡",
+			
+			// === PERSONNES ET ORGANISATION ===
+			"👤", "👥", "👨‍💼", "👩‍💼", "👨‍💻", "👩‍💻", "🕵️", "🕵️‍♂️", "🕵️‍♀️", "👮",
+			"👮‍♂️", "👮‍♀️", "👷", "👷‍♂️", "👷‍♀️", "💂", "🥷", "🦹", "🦹‍♂️", "🦹‍♀️",
+			
+			// === ACTIONS ET PROCESSUS ===
+			"✅", "✔️", "☑️", "❎", "❌", "⭐", "🎯", "🏃", "🏃‍♂️", "🏃‍♀️",
+			"⏰", "⏱️", "⏲️", "⏸️", "⏹️", "⏺️", "⏭️", "⏮️", "⏩", "⏪",
+			
+			// === DOCUMENTS ET FICHIERS ===
+			"📝", "📄", "📃", "📑", "📊", "📈", "📉", "📋", "📌", "📍",
+			"📎", "📏", "📐", "✂️", "🗂️", "📁", "📂", "🗃️", "🗄️", "💼",
+			
+			// === URGENCE ET INTERVENTION ===
+			"🆘", "🚑", "🚒", "🚓", "🚔", "🚕", "🚁", "✈️", "🛩️", "🚀",
+			"🚨", "🚥", "🚦", "🚧", "⚠️", "🔦", "💡", "🕯️", "🔍", "🔎",
+			
+			// === ANALYSE ET INVESTIGATION ===
+			"🔬", "🔭", "🧬", "🧪", "⚗️", "🧫", "🦠", "💉", "💊", "🩺",
+			"🔍", "🔎", "🔬", "📊", "📈", "📉", "📐", "📏", "🗺️", "🧭",
+			
+			// === OUTILS ET CONFIGURATION ===
+			"🔧", "🔨", "⚒️", "🛠️", "⚙️", "🔩", "⛏️", "🪛", "🪚", "🗜️",
+			"⚗️", "🧰", "🧲", "⚡", "🔌", "💡", "🔦", "🕯️", "🪔", "🏗️",
+			
+			// === TEMPS ET PLANNING ===
+			"⌚", "⏰", "⏱️", "⏲️", "🕐", "🕑", "🕒", "🕓", "🕔", "🕕",
+			"📅", "📆", "🗓️", "📋", "⏳", "⌛", "⏸️", "▶️", "⏭️", "⏮️",
+			
+			// === NAVIGATION ET DIRECTION ===
+			"⬆️", "⬇️", "⬅️", "➡️", "↗️", "↘️", "↙️", "↖️", "↕️", "↔️",
+			"🔄", "🔃", "🔁", "🔂", "▶️", "◀️", "🔼", "🔽", "⏩", "⏪",
+			
+			// === FINANCES ET VALEURS ===
+			"💰", "💵", "💴", "💶", "💷", "💸", "💳", "💎", "⚖️", "🏦",
+			"🪙", "💹", "📊", "📈", "📉", "🧾", "🏧", "💱", "💲", "🤑",
+			
+			// === SYMBOLES ET MARQUEURS ===
+			"❗", "❓", "❕", "❔", "⁉️", "‼️", "⭕", "❌", "🚫", "🛑",
+			"✳️", "❇️", "♻️", "🔰", "🔱", "⚜️", "🔆", "🔅", "✴️", "🆚",
+			
+			// === ÉTAT ET VALIDATION ===
+			"🟢", "🟡", "🔴", "🟠", "🔵", "🟣", "⚪", "⚫", "🟤", "🟥",
+			"🟧", "🟨", "🟩", "🟦", "🟪", "⬜", "⬛", "◼️", "◻️", "▪️",
+			
+			// === BÂTIMENTS ET INFRASTRUCTURE ===
+			"🏢", "🏛️", "🏦", "🏥", "🏭", "🏗️", "🏚️", "🏠", "🏡", "🏘️",
+			"🗼", "🗽", "⛪", "🕌", "🛕", "🕍", "⛩️", "🕋", "⛲", "🌐",
+			
+			// === NATURE ET ENVIRONNEMENT ===
+			"🌍", "🌎", "🌏", "🌐", "🗺️", "🧭", "⛰️", "🌋", "🗻", "🏔️",
+			"☀️", "🌤️", "⛅", "☁️", "🌧️", "⛈️", "🌩️", "❄️", "🌊", "💧",
+			
+			// === TRANSPORT ET DÉPLACEMENT ===
+			"🚗", "🚕", "🚙", "🚌", "🚎", "🚓", "🚑", "🚒", "🚐", "🚚",
+			"✈️", "🛩️", "🚁", "🛸", "🚀", "🛰️", "⛴️", "🚤", "⛵", "🚂",
+			
+			// === DIVERS UTILES ===
+			"📢", "📣", "📯", "🔊", "🔇", "🔈", "🔉", "🎚️", "🎛️", "🎤",
+			"📷", "📸", "📹", "🎥", "🎬", "📽️", "🎞️", "📺", "📻", "🎙️",
+			"🌡️", "🧯", "🪜", "🧨", "🎆", "🎇", "✨", "🎉", "🎊", "🎁",
+			
+			// === MATHÉMATIQUES ET LOGIQUE ===
+			"➕", "➖", "✖️", "➗", "🟰", "♾️", "‰", "⁉️", "❓", "❗",
+			"💯", "🔢", "#️⃣", "*️⃣", "🔤", "🔡", "🔠", "🔣", "🎲", "🎯",
+			
+			// === MÉDICAL ET SANTÉ ===
+			"🏥", "🚑", "💊", "💉", "🩹", "🩺", "🩻", "🩼", "🩽", "🦴",
+			"🧠", "🫀", "🫁", "🦷", "👁️", "👂", "🦾", "🦿", "🦽", "🦼",
+			
+			// === MÉTÉO ET CONDITIONS ===
+			"☀️", "☁️", "⛅", "⛈️", "🌤️", "🌥️", "🌦️", "🌧️", "🌨️", "🌩️",
+			"🌪️", "🌫️", "🌬️", "🌀", "🌈", "☂️", "☔", "⛱️", "⚡", "❄️",
+			
+			// === JEUX ET STRATÉGIE ===
+			"♟️", "♠️", "♣️", "♥️", "♦️", "🃏", "🎴", "🀄", "🎯", "🎲",
+			"🎮", "🕹️", "👾", "🔫", "🎰", "🧩", "🪀", "🪁", "🏆", "🥇"
+		];
+
 
         /**
          * Séparateurs disponibles pour la timeline
          * Options visuelles pour connecter les étapes
          */
         const availableSeparators = [
-			{ value: "↓", label: "Flèche bas ↓" },
+			// === FLÈCHES DIRECTIONNELLES ===
 			{ value: "→", label: "Flèche droite →" },
-			{ value: "⬇️", label: "Flèche bas emoji ⬇️" },
+			{ value: "←", label: "Flèche gauche ←" },
+			{ value: "↑", label: "Flèche haut ↑" },
+			{ value: "↓", label: "Flèche bas ↓" },
+			{ value: "↗", label: "Flèche diagonale ↗" },
+			{ value: "↘", label: "Flèche diagonale ↘" },
+			{ value: "↖", label: "Flèche diagonale ↖" },
+			{ value: "↙", label: "Flèche diagonale ↙" },
+			{ value: "↔", label: "Double flèche ↔" },
+			{ value: "↕", label: "Double flèche verticale ↕" },
+			
+			// === FLÈCHES EMOJI ===
 			{ value: "➡️", label: "Flèche droite emoji ➡️" },
-			{ value: "▼", label: "Triangle bas ▼" },
-			{ value: "►", label: "Triangle droite ►" },
-			{ value: "⤵️", label: "Courbe bas ⤵️" },
-			{ value: "🔽", label: "Bouton bas 🔽" },
-			{ value: "⏬", label: "Double flèche ⏬" },
-			{ value: "⭐", label: "Étoile ⭐" },
-			{ value: "🔸", label: "Losange 🔸" },
-			{ value: "▪️", label: "Carré ▪️" },
-			{ value: "•", label: "Puce •" },
-			{ value: "...", label: "Points de suspension ..." },
-			{ value: "puis", label: "Texte 'puis'" },
-			{ value: "⟩", label: "Chevron ⟩" },
-			{ value: "⚡", label: "Éclair ⚡" },
-			{ value: "🔄", label: "Cycle 🔄" },
-			{ value: "⏰", label: "Horloge ⏰" },
-			{ value: "🎯", label: "Cible 🎯" },
-			{ value: "📍", label: "Épingle 📍" },
-			{ value: "🔹", label: "Losange bleu 🔹" },
-			{ value: "🔺", label: "Triangle rouge 🔺" },
-			{ value: "⬆️", label: "Flèche haut ⬆️" },
+			{ value: "⬅️", label: "Flèche gauche emoji ⬅️" },
+			{ value: "⬆️", label: "Flèche haut emoji ⬆️" },
+			{ value: "⬇️", label: "Flèche bas emoji ⬇️" },
+			{ value: "↩️", label: "Retour ↩️" },
 			{ value: "↪️", label: "Flèche courbe ↪️" },
-			{ value: "🔃", label: "Flèches courbes 🔃" },
+			{ value: "⤴️", label: "Courbe haut ⤴️" },
+			{ value: "⤵️", label: "Courbe bas ⤵️" },
+			{ value: "🔃", label: "Flèches circulaires 🔃" },
+			{ value: "🔄", label: "Cycle 🔄" },
+			
+			// === CHEVRONS ET TRIANGLES ===
+			{ value: "›", label: "Chevron simple ›" },
+			{ value: "»", label: "Double chevron »" },
+			{ value: "⟩", label: "Chevron mathématique ⟩" },
+			{ value: "▶", label: "Triangle droite ▶" },
+			{ value: "▷", label: "Triangle vide ▷" },
+			{ value: "▸", label: "Petit triangle ▸" },
+			{ value: "▹", label: "Mini triangle ▹" },
+			{ value: "►", label: "Triangle plein ►" },
+			{ value: "▼", label: "Triangle bas ▼" },
+			{ value: "▽", label: "Triangle bas vide ▽" },
+			
+			// === PROGRESSION ET SÉQUENCE ===
+			{ value: "⏩", label: "Avance rapide ⏩" },
+			{ value: "⏪", label: "Retour rapide ⏪" },
 			{ value: "⏭️", label: "Suivant ⏭️" },
+			{ value: "⏮️", label: "Précédent ⏮️" },
 			{ value: "▶️", label: "Play ▶️" },
-			{ value: "◀️", label: "Retour ◀️" },
 			{ value: "⏸️", label: "Pause ⏸️" },
 			{ value: "⏹️", label: "Stop ⏹️" },
+			{ value: "⏺️", label: "Record ⏺️" },
+			{ value: "⏬", label: "Double bas ⏬" },
+			{ value: "⏫", label: "Double haut ⏫" },
+			
+			// === POINTS ET MARQUEURS ===
+			{ value: "•", label: "Puce ronde •" },
+			{ value: "◦", label: "Puce vide ◦" },
+			{ value: "▪", label: "Carré plein ▪" },
+			{ value: "▫", label: "Carré vide ▫" },
+			{ value: "◾", label: "Grand carré ◾" },
+			{ value: "◽", label: "Grand carré vide ◽" },
+			{ value: "⬤", label: "Gros point ⬤" },
+			{ value: "○", label: "Cercle vide ○" },
+			{ value: "●", label: "Cercle plein ●" },
+			{ value: "◉", label: "Cercle cible ◉" },
+			
+			// === INDICATEURS D'ÉTAT ===
 			{ value: "🟢", label: "Point vert 🟢" },
 			{ value: "🟡", label: "Point jaune 🟡" },
 			{ value: "🔴", label: "Point rouge 🔴" },
+			{ value: "🟠", label: "Point orange 🟠" },
+			{ value: "🔵", label: "Point bleu 🔵" },
+			{ value: "🟣", label: "Point violet 🟣" },
+			{ value: "⚪", label: "Point blanc ⚪" },
 			{ value: "⚫", label: "Point noir ⚫" },
-			{ value: "◽", label: "Carré blanc ◽" },
-			{ value: "◾", label: "Carré noir ◾" },
-			{ value: "➕", label: "Plus ➕" },
-			{ value: "➖", label: "Moins ➖" },
-			{ value: "✔️", label: "Check ✔️" },
-			{ value: "❌", label: "Croix ❌" },
-			{ value: "🔔", label: "Cloche 🔔" },
-			{ value: "⚠️", label: "Attention ⚠️" }
+			{ value: "🟩", label: "Carré vert 🟩" },
+			{ value: "🟨", label: "Carré jaune 🟨" },
+			
+			// === TEMPS ET DURÉE ===
+			{ value: "⏰", label: "Horloge ⏰" },
+			{ value: "⏱️", label: "Chronomètre ⏱️" },
+			{ value: "⏲️", label: "Timer ⏲️" },
+			{ value: "⏳", label: "Sablier ⏳" },
+			{ value: "⌛", label: "Sablier vide ⌛" },
+			{ value: "🕐", label: "1 heure 🕐" },
+			{ value: "🕑", label: "2 heures 🕑" },
+			{ value: "🕒", label: "3 heures 🕒" },
+			{ value: "📅", label: "Calendrier 📅" },
+			{ value: "🗓️", label: "Planning 🗓️" },
+			
+			// === CONNECTEURS LOGIQUES ===
+			{ value: "∴", label: "Donc ∴" },
+			{ value: "∵", label: "Car ∵" },
+			{ value: "⇒", label: "Implique ⇒" },
+			{ value: "⇔", label: "Équivalent ⇔" },
+			{ value: "⇨", label: "Grande flèche ⇨" },
+			{ value: "⟹", label: "Double implique ⟹" },
+			{ value: "⟶", label: "Longue flèche ⟶" },
+			{ value: "⟵", label: "Longue flèche gauche ⟵" },
+			{ value: "➔", label: "Flèche épaisse ➔" },
+			{ value: "➜", label: "Flèche courbe épaisse ➜" },
+			
+			// === SYMBOLES D'URGENCE ===
+			{ value: "🚨", label: "Gyrophare 🚨" },
+			{ value: "⚠️", label: "Attention ⚠️" },
+			{ value: "⚡", label: "Éclair ⚡" },
+			{ value: "🔥", label: "Feu 🔥" },
+			{ value: "💥", label: "Explosion 💥" },
+			{ value: "🆘", label: "SOS 🆘" },
+			{ value: "❗", label: "Exclamation ❗" },
+			{ value: "‼️", label: "Double exclamation ‼️" },
+			{ value: "⁉️", label: "Question-exclamation ⁉️" },
+			{ value: "❌", label: "Croix rouge ❌" },
+			
+			// === SYMBOLES SPÉCIAUX ===
+			{ value: "🔸", label: "Losange orange 🔸" },
+			{ value: "🔹", label: "Losange bleu 🔹" },
+			{ value: "🔶", label: "Grand losange orange 🔶" },
+			{ value: "🔷", label: "Grand losange bleu 🔷" },
+			{ value: "🔺", label: "Triangle rouge 🔺" },
+			{ value: "🔻", label: "Triangle rouge bas 🔻" },
+			{ value: "💠", label: "Diamant décoratif 💠" },
+			{ value: "🔲", label: "Bouton carré 🔲" },
+			{ value: "🔳", label: "Bouton carré blanc 🔳" },
+			{ value: "🎯", label: "Cible 🎯" },
+			
+			// === ACTIONS ET MOUVEMENTS ===
+			{ value: "🏃", label: "Course 🏃" },
+			{ value: "🚀", label: "Fusée 🚀" },
+			{ value: "✈️", label: "Avion ✈️" },
+			{ value: "🎯", label: "Objectif 🎯" },
+			{ value: "📍", label: "Épingle 📍" },
+			{ value: "🏁", label: "Drapeau damier 🏁" },
+			{ value: "🚩", label: "Drapeau rouge 🚩" },
+			{ value: "🏳️", label: "Drapeau blanc 🏳️" },
+			{ value: "⛳", label: "Golf/Objectif ⛳" },
+			{ value: "🎌", label: "Drapeaux croisés 🎌" },
+			
+			// === SYMBOLES MATHÉMATIQUES ===
+			{ value: "±", label: "Plus ou moins ±" },
+			{ value: "×", label: "Multiplication ×" },
+			{ value: "÷", label: "Division ÷" },
+			{ value: "≈", label: "Approximativement ≈" },
+			{ value: "≠", label: "Différent ≠" },
+			{ value: "≤", label: "Inférieur ou égal ≤" },
+			{ value: "≥", label: "Supérieur ou égal ≥" },
+			{ value: "∞", label: "Infini ∞" },
+			{ value: "∑", label: "Somme ∑" },
+			{ value: "√", label: "Racine √" },
+			
+			// === PONCTUATION ET TEXTE ===
+			{ value: "...", label: "Points de suspension ..." },
+			{ value: "…", label: "Ellipse …" },
+			{ value: ":", label: "Deux points :" },
+			{ value: "|", label: "Barre verticale |" },
+			{ value: "/", label: "Slash /" },
+			{ value: "\\", label: "Antislash \\" },
+			{ value: "—", label: "Tiret long —" },
+			{ value: "–", label: "Tiret moyen –" },
+			{ value: "-", label: "Tiret court -" },
+			{ value: "~", label: "Tilde ~" },
+			
+			// === MOTS DE LIAISON ===
+			{ value: "puis", label: "Mot: puis" },
+			{ value: "alors", label: "Mot: alors" },
+			{ value: "ensuite", label: "Mot: ensuite" },
+			{ value: "après", label: "Mot: après" },
+			{ value: "ET", label: "Mot: ET" },
+			{ value: "OU", label: "Mot: OU" },
+			{ value: "SI", label: "Mot: SI" },
+			{ value: "donc", label: "Mot: donc" },
+			{ value: "car", label: "Mot: car" },
+			{ value: "next", label: "Mot: next" },
+			
+			// === NUMÉROS ET ÉTAPES ===
+			{ value: "①", label: "Numéro 1 cerclé ①" },
+			{ value: "②", label: "Numéro 2 cerclé ②" },
+			{ value: "③", label: "Numéro 3 cerclé ③" },
+			{ value: "④", label: "Numéro 4 cerclé ④" },
+			{ value: "⑤", label: "Numéro 5 cerclé ⑤" },
+			{ value: "⑥", label: "Numéro 6 cerclé ⑥" },
+			{ value: "⑦", label: "Numéro 7 cerclé ⑦" },
+			{ value: "⑧", label: "Numéro 8 cerclé ⑧" },
+			{ value: "⑨", label: "Numéro 9 cerclé ⑨" },
+			{ value: "❶", label: "Numéro 1 noir ❶" },
+			{ value: "❷", label: "Numéro 2 noir ❷" },
+			{ value: "❸", label: "Numéro 3 noir ❸" },
+			{ value: "❹", label: "Numéro 4 noir ❹" },
+			{ value: "❺", label: "Numéro 5 noir ❺" },
+			{ value: "❻", label: "Numéro 6 noir ❻" },
+			{ value: "❼", label: "Numéro 7 noir ❼" },
+			{ value: "❽", label: "Numéro 8 noir ❽" },
+			{ value: "❾", label: "Numéro 9 noir ❾" },
+			{ value: "1️⃣", label: "Touche 1 1️⃣" },
+			{ value: "2️⃣", label: "Touche 2 2️⃣" },
+			{ value: "3️⃣", label: "Touche 3 3️⃣" },
+			{ value: "4️⃣", label: "Touche 4 4️⃣" },
+			{ value: "5️⃣", label: "Touche 5 5️⃣" },
+			{ value: "6️⃣", label: "Touche 6 6️⃣" },
+			{ value: "7️⃣", label: "Touche 7 7️⃣" },
+			{ value: "8️⃣", label: "Touche 8 8️⃣" },
+			{ value: "9️⃣", label: "Touche 9 9️⃣" },
+			
+			// === SYMBOLES ADDITIONNELS ===
+			{ value: "⊕", label: "Plus cerclé ⊕" },
+			{ value: "⊖", label: "Moins cerclé ⊖" },
+			{ value: "⊗", label: "Multiplié cerclé ⊗" },
+			{ value: "✓", label: "Check simple ✓" },
+			{ value: "✔", label: "Check gras ✔" },
+			{ value: "✗", label: "Croix simple ✗" },
+			{ value: "✘", label: "Croix grasse ✘" },
+			{ value: "★", label: "Étoile pleine ★" },
+			{ value: "☆", label: "Étoile vide ☆" },
+			{ value: "✦", label: "Étoile 4 branches ✦" }
 		];
 
 		//Gestion du Timeout
