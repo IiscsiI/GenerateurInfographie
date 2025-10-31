@@ -1731,33 +1731,168 @@ ${JSON.stringify(data, null, 2)}
              */
             getBaseStyles(project) {
                 return `
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: ${project.theme.colors.background}; padding: 20px; }
-        .preview-container { max-width: 1200px; margin: 0 auto; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); overflow: hidden; background: ${project.theme.colors.contentBg}; }
-        .preview-header { background: linear-gradient(135deg, ${project.theme.colors.header}, ${ColorManager.adjustBrightness(project.theme.colors.header, -20)}); color: white; text-align: center; padding: 50px 30px; position: relative; }
-        .preview-header::before { content: '⚠️'; font-size: 80px; display: block; margin-bottom: 25px; }
-        .preview-header.hide-icon::before { display: none; }
-        .preview-header h1 { font-size: 3em; font-weight: 900; margin-bottom: 15px; }
-        .preview-timeline { display: flex; align-items: center; justify-content: center; margin: 30px 0; flex-wrap: wrap; padding: 0 20px; }
-        .preview-timeline-item { color: white; padding: 12px 25px; border-radius: 30px; margin: 8px; font-weight: 700; }
-        .preview-steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 35px; padding: 50px; }
-        .preview-step { background: white; border-radius: 20px; padding: 35px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); border-left: 8px solid; position: relative; }
-        .preview-step-icon { font-size: 4em; margin-bottom: 25px; display: block; }
-        .preview-step-number { position: absolute; top: -20px; left: 25px; background: linear-gradient(135deg, ${project.theme.colors.stepNumber}, ${ColorManager.adjustBrightness(project.theme.colors.stepNumber, -20)}); color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.4em; box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
-        .preview-step h3 { font-size: 1.6em; margin-bottom: 20px; font-weight: 800; }
-        .preview-action-item { padding: 18px; border-radius: 12px; margin: 15px 0; border-left: 5px solid; font-weight: 600; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
-        .preview-emergency-contact { background: linear-gradient(135deg, ${project.theme.colors.emergency}, ${ColorManager.adjustBrightness(project.theme.colors.emergency, -20)}); color: white; padding: 30px; text-align: center; font-size: 1.2em; font-weight: 700; margin: 30px 50px; border-radius: 15px; }
-        .preview-footer { background: linear-gradient(135deg, ${project.theme.colors.footer}, ${ColorManager.adjustBrightness(project.theme.colors.footer, -15)}); color: white; text-align: center; padding: 40px 30px; }
-        .logo { position: absolute; max-height: 100px; z-index: 10; }
-        .logo.top-left { left: 25px; top: 25px; }
-        .logo.top-right { right: 25px; top: 25px; }
-        .logo.top-center { left: 50%; top: 25px; transform: translateX(-50%); }
-        .logo.bottom-left { left: 25px; bottom: 25px; }
-        .logo.bottom-right { right: 25px; bottom: 25px; }
-        .logo.bottom-center { left: 50%; bottom: 25px; transform: translateX(-50%); }
-        `;
-            },
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { font-family: 'Segoe UI', Arial, sans-serif; background: ${project.theme.colors.background}; padding: 20px; }
+                    .preview-container { max-width: 1200px; margin: 0 auto; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); overflow: hidden; background: ${project.theme.colors.contentBg}; }
+                    .preview-header { background: linear-gradient(135deg, ${project.theme.colors.header}, ${ColorManager.adjustBrightness(project.theme.colors.header, -20)}); color: white; text-align: center; padding: 50px 30px; position: relative; }
+                    .preview-header::before { content: '⚠️'; font-size: 80px; display: block; margin-bottom: 25px; }
+                    .preview-header.hide-icon::before { display: none; }
+                    .preview-header h1 { font-size: 3em; font-weight: 900; margin-bottom: 15px; }
+                    .preview-timeline { display: flex; align-items: center; justify-content: center; margin: 30px 0; flex-wrap: wrap; padding: 0 20px; }
+                    .preview-timeline-item { color: white; padding: 12px 25px; border-radius: 30px; margin: 8px; font-weight: 700; }
+                    .preview-steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 35px; padding: 50px; }
+                    .preview-step { background: white; border-radius: 20px; padding: 35px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); border-left: 8px solid; position: relative; }
+                    .preview-step-icon { font-size: 4em; margin-bottom: 25px; display: block; }
+                    .preview-step-number { position: absolute; top: -20px; left: 25px; background: linear-gradient(135deg, ${project.theme.colors.stepNumber}, ${ColorManager.adjustBrightness(project.theme.colors.stepNumber, -20)}); color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.4em; box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+                    .preview-step h3 { font-size: 1.6em; margin-bottom: 20px; font-weight: 800; }
+                    .preview-action-item { padding: 18px; border-radius: 12px; margin: 15px 0; border-left: 5px solid; font-weight: 600; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+                    .preview-emergency-contact { background: linear-gradient(135deg, ${project.theme.colors.emergency}, ${ColorManager.adjustBrightness(project.theme.colors.emergency, -20)}); color: white; padding: 30px; text-align: center; font-size: 1.2em; font-weight: 700; margin: 30px 50px; border-radius: 15px; }
+                    .preview-footer { background: linear-gradient(135deg, ${project.theme.colors.footer}, ${ColorManager.adjustBrightness(project.theme.colors.footer, -15)}); color: white; text-align: center; padding: 40px 30px; }
+                    .logo { position: absolute; max-height: 100px; z-index: 10; }
+                    .logo.top-left { left: 25px; top: 25px; }
+                    .logo.top-right { right: 25px; top: 25px; }
+                    .logo.top-center { left: 50%; top: 25px; transform: translateX(-50%); }
+                    .logo.bottom-left { left: 25px; bottom: 25px; }
+                    .logo.bottom-right { right: 25px; bottom: 25px; }
+                    .logo.bottom-center { left: 50%; bottom: 25px; transform: translateX(-50%); }
+                    `;
+        },
             
+            /**
+             * ========================================
+             * FONCTION DE MIGRATION v1.5 → v1.6
+             * ========================================
+             * 
+             * Cette fonction permet d'importer des fichiers créés avec la version 1.5
+             * dans la version 1.6 en convertissant automatiquement la structure de données.
+             * 
+             * À INTÉGRER dans le fichier Generateur_Infographie.html (v1.6)
+             * Position : Dans l'objet ExportManager, AVANT la fonction importProject
+             * Ligne approximative : ~1640-1768
+             */
+
+            /**
+             * Migre un projet v1.5 (v2.0) vers le format v1.6 (v4.0)
+             * @param {Object} oldData - Données au format v1.5
+             * @returns {Object} Données au format v1.6
+             */
+            migrateFromV1_5(oldData) {
+                console.log('🔄 Migration détectée : v1.5 → v1.6');
+                
+                // Génération d'IDs uniques pour les éléments
+                let idCounter = 1;
+                const generateId = () => idCounter++;
+                
+                // ============================================
+                // 1. MIGRATION DES TIMELINE ITEMS
+                // ============================================
+                const migratedTimeline = (oldData.timeline || []).map(item => ({
+                    id: generateId(),
+                    text: item.text || '',
+                    type: item.type || 'item'
+                }));
+                
+                // ============================================
+                // 2. MIGRATION DES STEPS
+                // ============================================
+                const migratedSteps = (oldData.steps || []).map((step, index) => {
+                    // Migration des actions avec IDs
+                    const migratedActions = (step.actions || []).map(action => ({
+                        id: generateId(),
+                        type: action.type || 'info',
+                        text: action.text || '',
+                        customColors: action.customColors || null
+                    }));
+                    
+                    return {
+                        id: generateId(),
+                        number: step.number !== undefined ? step.number : (index + 1),
+                        icon: step.icon || '📋',
+                        title: step.title || 'Étape sans titre',
+                        category: step.category || 'general',
+                        customColors: {
+                            border: null,
+                            background: null,
+                            text: null,
+                            actionBg: null
+                        },
+                        actions: migratedActions
+                    };
+                });
+                
+                // ============================================
+                // 3. MIGRATION DES COULEURS
+                // ============================================
+                const oldColors = oldData.settings?.colors || {};
+                const migratedColors = {
+                    header: oldColors.header || '#dc3545',
+                    timeline: oldColors.timeline || '#3498db',
+                    stepNumber: oldColors.stepNumber || '#0056b3',
+                    footer: oldColors.footer || '#2c3e50',
+                    emergency: oldColors.emergency || '#ff6b6b',
+                    background: oldColors.bodyBg || oldColors.previewBg || '#f8f9fa',
+                    contentBg: oldColors.contentBg || '#ffffff'
+                };
+                
+                // ============================================
+                // 4. MIGRATION DU LOGO
+                // ============================================
+                const migratedLogos = [];
+                if (oldData.logo && (oldData.logo.url || oldData.logo.file)) {
+                    migratedLogos.push({
+                        id: generateId(),
+                        type: oldData.logo.url ? 'url' : 'base64',
+                        data: oldData.logo.url || oldData.logo.file || '',
+                        position: oldData.logo.position || 'top-right',
+                        size: oldData.logo.size || 120,
+                        name: 'Logo importé v1.5'
+                    });
+                }
+                
+                // ============================================
+                // 5. CONSTRUCTION DU NOUVEAU FORMAT
+                // ============================================
+                const migratedProject = {
+                    _version: '4.0',
+                    
+                    metadata: {
+                        name: oldData.projectName || 'Projet migré v1.5',
+                        author: '',
+                        organization: '',
+                        license: 'AGPL-3.0 / Commercial',
+                        migratedFrom: 'v1.5',
+                        migrationDate: new Date().toISOString()
+                    },
+                    
+                    content: {
+                        title: oldData.settings?.mainTitle || 'CYBERATTAQUE DÉTECTÉE',
+                        subtitle: oldData.settings?.mainSubtitle || 'Procédure d\'urgence - Actions immédiates à entreprendre',
+                        showHeaderIcon: true,
+                        emergencyMessage: oldData.settings?.emergencyMessage || '🚨 EN CAS D\'URGENCE : Contactez immédiatement votre RSSI ou équipe cybersécurité 🚨',
+                        footerMessage: oldData.settings?.footerMessage || 'RAPPEL IMPORTANT : Chaque minute compte en cas de cyberattaque\nCette procédure doit être affichée et connue de tous les collaborateurs'
+                    },
+                    
+                    theme: {
+                        colors: migratedColors
+                    },
+                    
+                    elements: {
+                        logos: migratedLogos,
+                        timeline: migratedTimeline,
+                        steps: migratedSteps
+                    }
+                };
+                
+                console.log('✅ Migration terminée avec succès');
+                console.log(`   - Timeline: ${migratedTimeline.length} éléments`);
+                console.log(`   - Steps: ${migratedSteps.length} étapes`);
+                console.log(`   - Logos: ${migratedLogos.length} logo(s)`);
+                
+                return migratedProject;
+            },
+
+
+
             /**
              * Importe un projet depuis HTML ou JSON
              * @param {string} fileContent - Contenu du fichier
@@ -1775,20 +1910,26 @@ ${JSON.stringify(data, null, 2)}
                     const doc = parser.parseFromString(fileContent, 'text/html');
                     const script = doc.getElementById('project-data');
                     
-                    if (!script) {
-                        throw new Error('Fichier HTML invalide : données projet introuvables');
-                    }
-                    
-                    data = JSON.parse(script.textContent);
+                if (!script) {
+                    throw new Error('Fichier HTML invalide : données projet introuvables');
+                }
+     
+                data = JSON.parse(script.textContent);
                 } else {
                     throw new Error('Format de fichier non supporté');
                 }
-                
+
+                 // Détection v1.5 : présence de "version" au lieu de "_version"
+                if (data.version && !data._version) {
+                    console.log('📦 Fichier v1.5 détecté, migration automatique...');
+                    data = this.migrateFromV1_5(data);
+                }
+
                 // Validation basique
                 if (!data.metadata || !data.content || !data.theme || !data.elements) {
                     throw new Error('Structure de données invalide');
                 }
-                
+       
                 return data;
             }
         };
