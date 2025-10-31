@@ -1656,35 +1656,187 @@
             },
             
             /**
-             * Exporte le projet en HTML avec données embarquées
+             * Exporte le projet en HTML pur (sans Alpine.js)
+             * Convertit toutes les directives Alpine.js en HTML standard
              * @param {Object} project - Données du projet
-             * @param {HTMLElement} previewElement - Élément DOM à exporter
+             * @param {HTMLElement} previewElement - Élément de prévisualisation
              * @returns {string} HTML complet
              */
             exportHTML(project, previewElement) {
                 const data = this.prepareForExport(project);
                 const customStyles = this.generateCustomStyles(project);
                 
+                // 🆕 ÉTAPE 1 : Cloner l'élément pour ne pas modifier l'original
+                const clonedPreview = previewElement.cloneNode(true);
+                
+                // 🆕 ÉTAPE 2 : Convertir les directives Alpine.js en HTML pur
+                this.convertAlpineToStatic(clonedPreview, project);
+                
+                // 🆕 ÉTAPE 3 : Générer et injecter les logos manuellement
+                this.injectLogos(clonedPreview, project);
+                
                 return `<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="generator" content="Générateur Cyberattaque v4.0">
-    <meta name="project-version" content="${this.version}">
-    <title>${project.content.title}</title>
-    <style>
-        ${this.getBaseStyles(project)}
-        ${customStyles}
-    </style>
-</head>
-<body>
-    ${previewElement.outerHTML}
-    <script id="project-data" type="application/json">
-${JSON.stringify(data, null, 2)}
-    <\/script>
-</body>
-</html>`;
+                    <html lang="fr">
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="generator" content="Générateur Cyberattaque v4.0">
+                        <meta name="project-version" content="${this.version}">
+                        <title>${project.content.title}</title>
+                        <style>
+                            ${this.getBaseStyles(project)}
+                            ${customStyles}
+                        </style>
+                    </head>
+                    <body>
+                        ${clonedPreview.outerHTML}
+                        <script id="project-data" type="application/json">
+                    ${JSON.stringify(data, null, 2)}
+                        <\/script>
+                    </body>
+                    </html>`;
             },
+
+            /**
+             * 🆕 Convertit les directives Alpine.js en HTML statique
+             * @param {HTMLElement} element - Élément à convertir
+             * @param {Object} project - Données du projet
+             */
+            convertAlpineToStatic(element, project) {
+                // Supprimer tous les attributs x-* et :*
+                const allElements = element.querySelectorAll('*');
+                allElements.forEach(el => {
+                    // Sauvegarder x-text avant de le supprimer
+                    if (el.hasAttribute('x-text')) {
+                        const xTextValue = el.getAttribute('x-text');
+                        // Évaluer x-text (simplifié pour les cas courants)
+                        if (xTextValue === 'project.content.title') {
+                            el.textContent = project.content.title;
+                        } else if (xTextValue === 'project.content.subtitle') {
+                            el.textContent = project.content.subtitle;
+                        } else if (xTextValue === 'project.content.contactTitle') {
+                            el.textContent = project.content.contactTitle;
+                        } else if (xTextValue === 'project.content.contactInfo') {
+                            el.textContent = project.content.contactInfo;
+                        } else if (xTextValue === 'project.content.footerText') {
+                            el.textContent = project.content.footerText;
+                        }
+                    }
+                    
+                    // Gérer :style pour les éléments avec style dynamique
+                    if (el.hasAttribute(':style')) {
+                        const styleAttr = el.getAttribute(':style');
+                        // Évaluer les styles simples
+                        if (styleAttr.includes('project.theme.colors')) {
+                            // Ces styles sont déjà dans le CSS de base, on peut supprimer
+                            el.removeAttribute(':style');
+                        }
+                    }
+                    
+                    // Supprimer tous les attributs Alpine.js
+                    const alpineAttrs = [];
+                    for (let attr of el.attributes) {
+                        if (attr.name.startsWith('x-') || 
+                            attr.name.startsWith(':') || 
+                            attr.name.startsWith('@')) {
+                            alpineAttrs.push(attr.name);
+                        }
+                    }
+                    alpineAttrs.forEach(attr => el.removeAttribute(attr));
+                });
+                
+                // Supprimer toutes les balises <template>
+                const templates = element.querySelectorAll('template');
+                templates.forEach(template => template.remove());
+            },
+
+            /**
+             * 🆕 Injecte les logos en HTML pur dans l'élément
+             * @param {HTMLElement} element - Élément cloné
+             * @param {Object} project - Données du projet
+             */
+            injectLogos(element, project) {
+                // Trouver le header et le footer
+                const header = element.querySelector('.preview-header');
+                const footer = element.querySelector('.preview-footer');
+
+                if (footer && window.getComputedStyle(footer).position === 'static') {
+                    // applique inline de façon non destructive
+                    footer.style.position = 'relative';
+                }
+                
+                if (!project.elements.logos || project.elements.logos.length === 0) {
+                    return;
+                }
+                
+                // 🆕 Générer les logos TOP dans le header
+                const topLogos = project.elements.logos.filter(logo => 
+                    logo.position && logo.position.startsWith('top')
+                );
+                
+                topLogos.forEach(logo => {
+                    if (header) {
+                        const img = document.createElement('img');
+                        img.src = logo.file || logo.url || '';
+                        img.className = `logo ${logo.position}`;
+                        img.style.maxWidth = `${logo.size}px`;
+                        img.alt = 'Logo';
+                        header.insertBefore(img, header.firstChild);
+                    }
+                });
+                
+                // 🆕 Générer les logos BOTTOM dans le footer
+                const bottomLogos = project.elements.logos.filter(logo => 
+                    logo.position && logo.position.startsWith('bottom')
+                );
+                
+                bottomLogos.forEach(logo => {
+                    if (footer) {
+                        const img = document.createElement('img');
+                        img.src = logo.file || logo.url || '';
+                        img.className = `logo ${logo.position}`;
+                        img.style.maxWidth = `${logo.size}px`;
+                        img.alt = 'Logo';
+                        footer.appendChild(img);
+                    }
+                });
+
+                // 🧩 Ajuster le positionnement vertical des logos du footer
+                (function adjustFooterLogosForCenteredText() {
+                    if (!footer) return;
+
+                    // Vérifier s’il y a du texte (par ex. le paragraphe "RAPPEL IMPORTANT...")
+                    const hasText = footer.querySelector('p');
+                    if (!hasText) return;
+
+                    // Cibler les logos du footer
+                    const footerLogos = footer.querySelectorAll('img.logo');
+                    if (!footerLogos || footerLogos.length === 0) return;
+
+                    // Ajuster chaque logo
+                    footerLogos.forEach(img => {
+                        // Supprimer l’ancrage bas
+                        img.style.bottom = 'auto';
+                        // Centrage vertical
+                        img.style.top = '50%';
+                        img.style.transform = 'translateY(-50%)';
+                        // Repositionner horizontalement selon la classe
+                        if (img.classList.contains('bottom-left')) {
+                            img.style.left = '30px';
+                            img.style.right = 'auto';
+                        } else if (img.classList.contains('bottom-right')) {
+                            img.style.right = '30px';
+                            img.style.left = 'auto';
+                        } else if (img.classList.contains('bottom-center')) {
+                            img.style.left = '50%';
+                            img.style.transform = 'translate(-50%, -50%)';
+                        }
+                        // Forcer un positionnement absolu
+                        img.style.position = 'absolute';
+                        img.style.zIndex = img.style.zIndex || 12;
+                    });
+                })();
+            },
+
             
             /**
              * Génère les styles CSS pour les couleurs personnalisées
@@ -1747,7 +1899,7 @@ ${JSON.stringify(data, null, 2)}
                     .preview-step h3 { font-size: 1.6em; margin-bottom: 20px; font-weight: 800; }
                     .preview-action-item { padding: 18px; border-radius: 12px; margin: 15px 0; border-left: 5px solid; font-weight: 600; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
                     .preview-emergency-contact { background: linear-gradient(135deg, ${project.theme.colors.emergency}, ${ColorManager.adjustBrightness(project.theme.colors.emergency, -20)}); color: white; padding: 30px; text-align: center; font-size: 1.2em; font-weight: 700; margin: 30px 50px; border-radius: 15px; }
-                    .preview-footer { background: linear-gradient(135deg, ${project.theme.colors.footer}, ${ColorManager.adjustBrightness(project.theme.colors.footer, -15)}); color: white; text-align: center; padding: 40px 30px; }
+                    .preview-footer {position:relative; background: linear-gradient(135deg, ${project.theme.colors.footer}, ${ColorManager.adjustBrightness(project.theme.colors.footer, -15)}); color: white; text-align: center; padding: 40px 30px; }
                     .logo { position: absolute; max-height: 100px; z-index: 10; }
                     .logo.top-left { left: 25px; top: 25px; }
                     .logo.top-right { right: 25px; top: 25px; }
@@ -2720,17 +2872,32 @@ ${JSON.stringify(data, null, 2)}
                  * Exporte en HTML
                  */
                 exportHTML() {
-                    const preview = document.getElementById('preview-container');
-                    const html = ExportManager.exportHTML(this.project, preview);
-                    
-                    this.downloadFile(
-                        html, 
-                        'text/html', 
-                        `${this.project.metadata.name.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.html`
-                    );
-                    
-                    this.showExportModal = false;
-                    this.showSuccess('HTML exporté');
+                    // Attendre que toutes les directives Alpine soient rendues
+                    this.$nextTick(() => {
+                        const preview = document.getElementById('preview-container');
+                        const clone = preview.cloneNode(true);
+
+                        // ⚙️ Supprimer uniquement les attributs Alpine (sans toucher aux styles réels)
+                        clone.querySelectorAll('[x-data], [x-text], [x-show], [x-if], [x-for], [x-bind], [x-model], [x-ref], [x-transition], [x-cloak]').forEach(el => {
+                            [...el.attributes].forEach(attr => {
+                                if (attr.name.startsWith('x-') || attr.name.startsWith(':') || attr.name.startsWith('@')) {
+                                    el.removeAttribute(attr.name);
+                                }
+                            });
+                        });
+
+                        // ✅ Récupération des logos déjà rendus (pas d'injection manuelle)
+                        const html = ExportManager.exportHTML(this.project, clone);
+
+                        this.downloadFile(
+                            html,
+                            'text/html',
+                            `${this.project.metadata.name.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.html`
+                        );
+
+                        this.showExportModal = false;
+                        this.showSuccess('HTML exporté');
+                    });
                 },
                 
                 /**
