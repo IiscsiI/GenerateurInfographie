@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-    Générateur d'Infographie Cybersécurité v4.0 - Refactored Edition
+    Générateur d'Infographie Cybersécurité v1.6.3 / Data model v4.0
     Copyright (C) 2025 [Guillemin Pierre-Eric]
     Licence : AGPL-3.0 (usage public/collectivités) - Commerciale (entreprises)
     
@@ -14,8 +14,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="Générateur Cyberattaque v4.0">
-    <title>Générateur d'Infographie v4.0 - Refactoré</title>
+    <meta name="generator" content="Générateur Cyberattaque v1.6.3">
+    <title>Générateur d'Infographie v1.6.3</title>
     
     <!-- Color Picker - Pickr -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/nano.min.css"/>
@@ -210,14 +210,38 @@
             border-radius: 8px;
         }
 
+        /* === COLLAPSE/EXPAND SYSTEM === */
+        .step-wrapper {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: flex-start;
+        }
+
+        /* Zone de drag isolée */
+        .step-drag-zone {
+            flex-shrink: 0;
+            padding: 20px 0;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .step-wrapper.sortable-ghost {
+            opacity: 0.5;
+        }
+
+        .step-wrapper.sortable-ghost .step-editor {
+            background: #e3f2fd;
+        }
+
         .step-editor {
+            flex: 1;
             border: 2px solid #e9ecef;
             border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 0;
             background: linear-gradient(135deg, #f8f9fa, white);
             transition: var(--transition);
-            cursor: move;
+            cursor: default;
         }
 
         .step-editor:hover {
@@ -225,16 +249,66 @@
             box-shadow: var(--box-shadow);
         }
 
-        .step-editor.sortable-ghost {
-            opacity: 0.5;
-            background: #e3f2fd;
-        }
-        
-        .step-header {
+        /* Header cliquable pour collapse (summary) */
+        .step-summary {
+            list-style: none;
             display: flex;
             align-items: center;
-            margin-bottom: 20px;
             gap: 15px;
+            padding: 20px;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 10px 10px 0 0;
+            transition: background 0.2s;
+            margin: 0;
+        }
+
+        .step-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .step-summary::marker {
+            display: none;
+        }
+
+        .step-summary:hover {
+            background: rgba(0, 86, 179, 0.05);
+        }
+
+        /* Inputs dans le summary */
+        .step-summary input {
+            cursor: text;
+        }
+
+        /* Icône de collapse */
+        .collapse-icon {
+            font-size: 14px;
+            color: #6c757d;
+            transition: transform 0.3s ease;
+            margin-left: 10px;
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+
+        details[open] .collapse-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Contenu de l'étape */
+        .step-content {
+            padding: 0 20px 20px 20px;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
         .step-number-input {
@@ -695,8 +769,7 @@
         <div class="editor-panel">
             
             <div class="editor-header">
-                <h2>✏️ Générateur d'Infographie v4.0</h2>
-                <p>Refactoré • Optimisé • Documenté</p>
+                <h2>✏️ Générateur d'Infographie v1.6.3</h2>
             </div>
 
             <div class="toolbar">
@@ -865,12 +938,25 @@
                 <!-- ÉTAPES -->
                 <div class="section-header">📋 Étapes et actions</div>
                 
+                
+                <!-- Bouton Tout ouvrir/fermer -->
+                <div style="margin-bottom: 15px; text-align: right;">
+                    <button class="btn btn-info btn-sm" @click="toggleAllSteps()">
+                        <span x-text="allStepsOpen ? '📕 Tout fermer' : '📖 Tout ouvrir'"></span>
+                    </button>
+                </div>
                 <div x-ref="stepsContainer">
                     <template x-for="(step, stepIndex) in project.elements.steps" :key="step.id">
-                        <div class="step-editor">
-                            <div class="step-header">
+                        <div class="step-wrapper">
+                            <!-- Zone de drag isolée -->
+                            <div class="step-drag-zone">
                                 <span class="drag-handle">⋮⋮</span>
-                                <input type="number" class="step-number-input" x-model.number="step.number" min="1" max="99">
+                            </div>
+                            
+                            <!-- Détails avec collapse -->
+                            <details class="step-editor">
+                                <summary class="step-summary">
+                                <input type="number" class="step-number-input" x-model.number="step.number" min="1" max="99" @click.stop>
                                 <input 
                                     type="text" 
                                     class="step-icon-input" 
@@ -879,8 +965,11 @@
                                     readonly
                                     style="cursor: pointer;"
                                 >
-                                <input type="text" style="flex: 1;" x-model="step.title">
-                            </div>
+                                <input type="text" style="flex: 1;" x-model="step.title" @click.stop>
+                                    <span class="collapse-icon">▼</span>
+                                </summary>
+                                
+                                <div class="step-content">
                             
                             <div class="form-group">
                                 <label>Catégorie d'étape</label>
@@ -1162,9 +1251,22 @@
                     <div style="border: 2px solid var(--primary); border-radius: 10px; padding: 20px;">
                         <h4 style="color: var(--primary); margin-bottom: 15px;">📄 Format PDF (Poster)</h4>
                         
-                        <!-- Warning si trop d'étapes -->
-                        <div x-show="project.elements.steps.length > 10" style="background: #fff3cd; border: 1px solid #ffc107; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 13px;">
-                            ⚠️ <strong>Attention :</strong> Votre infographie contient <span x-text="project.elements.steps.length"></span> étapes. Pour un rendu optimal sur poster, nous recommandons maximum 10 étapes.
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px;">
+                                Méthode d'export :
+                            </label>
+                            <div style="display: flex; gap: 10px;">
+                                <label style="flex: 1; cursor: pointer; padding: 10px; border: 2px solid #dee2e6; border-radius: 8px; text-align: center; transition: all 0.2s;" 
+                                    :style="pdfMethod === 'print' ? 'border-color: var(--primary); background: #e3f2fd;' : ''">
+                                    <input type="radio" x-model="pdfMethod" value="print" style="margin-right: 5px;">
+                                    🖨️ Print
+                                </label>
+                            </div>
+                            <p style="font-size: 11px; color: #6c757d; margin-top: 5px; text-align: center;">
+                                <strong>Print :</strong> Meilleure qualité, texte vectoriel, idéal pour ≤6 étapes<br>
+                                Utilisez Portrait jusqu'à 6 étapes, paysage jusqu'à 3 étapes<br>
+                                💡 Pour plus de 6 étapes, utilisez le format Image PNG pour éviter les problèmes de mise en page<br>
+                            </p>
                         </div>
                         
                         <div style="margin-bottom: 15px;">
@@ -1199,7 +1301,9 @@
                             ℹ️ Le contenu sera ajusté sur 1 page • Qualité 300 DPI
                         </p>
                         
-                        <button class="btn btn-primary w-100" @click="exportPDF()">📄 Générer PDF</button>
+                        <button class="btn btn-primary w-100" @click="generatePDF()">
+                            📄 Générer PDF
+                        </button>
                     </div>
                     
                     <div style="border: 2px solid var(--info); border-radius: 10px; padding: 20px;">
@@ -1217,7 +1321,7 @@
         <div class="emoji-selector" :class="{ 'active': showEmojiSelector }">
             <h3>Choisir un emoji</h3>
             <div class="emoji-grid">
-                <template x-for="emoji in availableEmojis" :key="emoji">
+                <template x-for="(emoji, index) in availableEmojis" :key="index">
                     <div class="emoji-option" @click="selectEmoji(emoji)" x-text="emoji"></div>
                 </template>
             </div>
@@ -1666,20 +1770,20 @@
                 const data = this.prepareForExport(project);
                 const customStyles = this.generateCustomStyles(project);
                 
-                // 🆕 ÉTAPE 1 : Cloner l'élément pour ne pas modifier l'original
+                //  ÉTAPE 1 : Cloner l'élément pour ne pas modifier l'original
                 const clonedPreview = previewElement.cloneNode(true);
                 
-                // 🆕 ÉTAPE 2 : Convertir les directives Alpine.js en HTML pur
+                //  ÉTAPE 2 : Convertir les directives Alpine.js en HTML pur
                 this.convertAlpineToStatic(clonedPreview, project);
                 
-                // 🆕 ÉTAPE 3 : Générer et injecter les logos manuellement
+                //  ÉTAPE 3 : Générer et injecter les logos manuellement
                 this.injectLogos(clonedPreview, project);
                 
                 return `<!DOCTYPE html>
                     <html lang="fr">
                     <head>
                         <meta charset="UTF-8">
-                        <meta name="generator" content="Générateur Cyberattaque v4.0">
+                        <meta name="generator" content="Générateur Cyberattaque v1.6.3">
                         <meta name="project-version" content="${this.version}">
                         <title>${project.content.title}</title>
                         <style>
@@ -1697,7 +1801,7 @@
             },
 
             /**
-             * 🆕 Convertit les directives Alpine.js en HTML statique
+             *  Convertit les directives Alpine.js en HTML statique
              * @param {HTMLElement} element - Élément à convertir
              * @param {Object} project - Données du projet
              */
@@ -1750,7 +1854,7 @@
             },
 
             /**
-             * 🆕 Injecte les logos en HTML pur dans l'élément
+             *  Injecte les logos en HTML pur dans l'élément
              * @param {HTMLElement} element - Élément cloné
              * @param {Object} project - Données du projet
              */
@@ -1768,7 +1872,7 @@
                     return;
                 }
                 
-                // 🆕 Générer les logos TOP dans le header
+                //  Générer les logos TOP dans le header
                 const topLogos = project.elements.logos.filter(logo => 
                     logo.position && logo.position.startsWith('top')
                 );
@@ -1784,7 +1888,7 @@
                     }
                 });
                 
-                // 🆕 Générer les logos BOTTOM dans le footer
+                //  Générer les logos BOTTOM dans le footer
                 const bottomLogos = project.elements.logos.filter(logo => 
                     logo.position && logo.position.startsWith('bottom')
                 );
@@ -1800,11 +1904,11 @@
                     }
                 });
 
-                // 🧩 Ajuster le positionnement vertical des logos du footer
+                // Ajuster le positionnement vertical des logos du footer
                 (function adjustFooterLogosForCenteredText() {
                     if (!footer) return;
 
-                    // Vérifier s’il y a du texte (par ex. le paragraphe "RAPPEL IMPORTANT...")
+                    // Vérifier s'il y a du texte (par ex. le paragraphe "RAPPEL IMPORTANT...")
                     const hasText = footer.querySelector('p');
                     if (!hasText) return;
 
@@ -1814,7 +1918,7 @@
 
                     // Ajuster chaque logo
                     footerLogos.forEach(img => {
-                        // Supprimer l’ancrage bas
+                        // Supprimer l'ancrage bas
                         img.style.bottom = 'auto';
                         // Centrage vertical
                         img.style.top = '50%';
@@ -1918,9 +2022,6 @@
              * Cette fonction permet d'importer des fichiers créés avec la version 1.5
              * dans la version 1.6 en convertissant automatiquement la structure de données.
              * 
-             * À INTÉGRER dans le fichier Generateur_Infographie.html (v1.6)
-             * Position : Dans l'objet ExportManager, AVANT la fonction importProject
-             * Ligne approximative : ~1640-1768
              */
 
             /**
@@ -2388,25 +2489,57 @@
                 },
                 
                 availableEmojis: [
-                    "🖥️", "💻", "📱", "⌨️", "🖱️", "🖨️", "💾", "💿", "📀", "📌",
-                    "🛡️", "🔐", "🔓", "🔒", "🔑", "🗝️", "🚨", "⚠️", "⛔", "🚫",
-                    "📞", "☎️", "📲", "📧", "📨", "📩", "📤", "📥", "✉️", "📢",
-                    "👤", "👥", "👨‍💼", "👩‍💼", "👨‍💻", "👩‍💻", "🕵️", "👮", "👷", "💂",
-                    "✅", "✔️", "☑️", "⎘", "❌", "⭕", "🎯", "🃏", "⏰", "⏱️",
-                    "📄", "📃", "📑", "📊", "📈", "📉", "📋", "🔖", "📍", "📎",
-                    "🆘", "🚑", "🚒", "🚓", "🚔", "✈️", "🚀", "→", "⇒", "➡️",
-                    "⬆️", "⬇️", "⬅️", "↗️", "↘️", "↙️", "↖️", "↔️", "↕️", "🔄"
+                    // 💻 Informatique & Matériel
+                    "🖥️", "💻", "📱", "⌨️", "🖱️", "🖨️", "💾", "💿", "📀", "🔌", "🔋", "📡", "🛰️",
+
+                    // 🔒 Sécurité & Protection
+                    "🛡️", "🔐", "🔓", "🔒", "🔑", "🗝️", "🚨", "⚠️", "⛔", "🚫", "🧱", "🧰", "🧯", "🪪",
+
+                    // 📢 Communication & Messages
+                    "📞", "☎️", "📲", "📧", "📨", "📩", "📤", "📥", "✉️", "📢", "💬", "🗨️", "📣", "📫", "📪", "📬", "📭",
+
+                    // 👩‍💼👨‍💻 Personnes & Rôles
+                    "👤", "👥", "👨‍💼", "👩‍💼", "👨‍💻", "👩‍💻", "🕵️", "👮", "👷", "💂", "👨‍🔧", "👩‍🔧", "👨‍🏫", "👩‍🏫", "👨‍✈️", "👩‍✈️", "🧑‍⚖️", "🧑‍🏭",
+
+                    // ✅ Validation & Statuts
+                    "✅", "✔️", "☑️", "❌", "⭕", "🔁", "🔂", "🔄", "🆗", "🆒", "🆙", "🆘", "🆔", "📛", "🏁",
+
+                    // 📊 Documentation & Données
+                    "📄", "📃", "📑", "📊", "📈", "📉", "📋", "📎", "📍", "📌", "📔", "📕", "📗", "📘", "📙", "📚", "🗂️", "🗃️", "🗄️", "🧾", "🔖",
+
+                    // 🕒 Temps & Gestion
+                    "⏰", "⏱️", "⏲️", "🕓", "📅", "📆", "🗓️", "🕐", "🕒", "🕘",
+
+                    // ⚙️ Outils & Processus
+                    "⚙️", "🛠️", "🔧", "🔩", "🧩", "🧮", "🔍", "🔎", "📡", "🧭",
+
+                    // 🚀 Mouvement & Progression
+                    "🚀", "✈️", "🚁", "🚦", "➡️", "⬆️", "⬇️", "⬅️", "↗️", "↘️", "↙️", "↖️", "↔️", "↕️", "🪜",
+
+                    // 💼 Entreprise & Organisation
+                    "🏢", "🏛️", "🏬", "🏣", "🏠", "🏗️", "💼", "📊", "📈", "📉", "🎯", "💡", "📋",
+
+                    // 🧠 Analyse & Stratégie
+                    "🧠", "🤔", "💭", "🧩", "🔬", "🧪", "🧰", "🧮", "📈", "💹",
+
+                    // 🔥 Urgence & Incident
+                    "🚒", "🚑", "🚓", "🚔", "🔥", "💥", "🧨", "📛", "🆘", "🏴‍☠️",
+
+                    // 🌐 Réseau & Cloud
+                    "🌐", "💠", "🕸️", "🗺️", "☁️", "💭", "📶", "🔗", "🪐", "🧷"
                 ],
                 
                 showExportModal: false,
                 showEmojiSelector: false,
                 emojiSelectorTarget: null,
+                allStepsOpen: false,
                 emojiSelectorIndex: null,
                 emojiSelectorActionIndex: null, // Pour les actions
                 
                 // Options export PDF
                 pdfFormat: 'A3',
                 pdfOrientation: 'portrait',
+                pdfMethod: 'print',
                 
                 notyf: null,
                 isInitialized: false,
@@ -2441,7 +2574,7 @@
                     // Auto-save sur changements
                     this.$watch('project', () => this.autoSave(), { deep: true });
                     
-                    this.showSuccess('✨ Générateur v4.0 prêt !');
+                    this.showSuccess('✨ Générateur v1.6.3 prêt !');
                 },
                 
                 // ============================================
@@ -2830,6 +2963,17 @@
                 },
                 
                 /**
+                 * Ouvre/ferme toutes les étapes (collapse/expand all)
+                 */
+                toggleAllSteps() {
+                    this.allStepsOpen = !this.allStepsOpen;
+                    this.$nextTick(() => {
+                        const details = document.querySelectorAll('.step-editor');
+                        details.forEach(d => d.open = this.allStepsOpen);
+                    });
+                },
+                
+                /**
                  * Sélectionne un emoji
                  * @param {string} emoji - Emoji sélectionné
                  */
@@ -2869,6 +3013,15 @@
                 // ============================================
                 
                 /**
+                 * Méthode wrapper pour générer le PDF selon la méthode choisie
+                 */
+                generatePDF() {
+                    if (this.pdfMethod === 'print') {
+                        this.exportPDFPrint();
+                    } 
+                },
+                
+                /**
                  * Exporte en HTML
                  */
                 exportHTML() {
@@ -2899,109 +3052,301 @@
                         this.showSuccess('HTML exporté');
                     });
                 },
-                
+
                 /**
-                 * Exporte en PDF avec gestion des formats A3/A2
+                 * Exporte en PDF via la boîte de dialogue d'impression (qualité maximale)
+                 * Utilise @media print CSS pour un rendu natif parfait
                  */
-                async exportPDF() {
-                    // Vérifier le nombre d'étapes
-                    if (this.project.elements.steps.length > 10) {
-                        if (!confirm('⚠️ Votre infographie contient ' + this.project.elements.steps.length + ' étapes. Le rendu sur poster risque d\'être difficile à lire. Continuer quand même ?')) {
+                async exportPDFPrint() {
+                    try {
+                        // 1. Préparer le contenu à imprimer
+                        const preview = document.getElementById('preview-container');
+                        const clone = preview.cloneNode(true);
+                        
+                        // 2. Créer une fenêtre d'impression dédiée
+                        const printWindow = window.open('', '_blank', 'width=1200,height=800');
+                        
+                        if (!printWindow) {
+                            this.showError('❌ Popup bloquée ! Autorisez les popups pour cette fonction.');
                             return;
                         }
-                    }
-                    
-                    // Notification courte (ne pas attendre qu'elle se ferme)
-                    this.showSuccess('⏳ Génération PDF en cours...');
-                    
-                    // Petit délai pour laisser la notification s'afficher
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    
-                    try {
-                        const preview = document.getElementById('preview-container');
                         
-                        // Dimensions en mm pour 300 DPI (11.811 px/mm)
-                        const formats = {
-                            A3: { portrait: { w: 297, h: 420 }, landscape: { w: 420, h: 297 } },
-                            A2: { portrait: { w: 420, h: 594 }, landscape: { w: 594, h: 420 } }
-                        };
+                        // 3. Construire le document HTML optimisé pour l'impression
+                        printWindow.document.write(`
+                            <!DOCTYPE html>
+                            <html lang="fr">
+                            <head>
+                                <meta charset="UTF-8">
+                                <title>${this.project.metadata.name} - PDF Export</title>
+                                <style>
+                                    /* === CONFIGURATION DE LA PAGE === */
+                                    @page {
+                                        size: ${this.pdfFormat === 'A3' ? 'A3' : 'A2'} ${this.pdfOrientation};
+                                        margin: 5mm; /* Marges réduites pour plus d'espace */
+                                    }
+                                    
+                                    /* === STYLES DE BASE === */
+                                    * { 
+                                        margin: 0; 
+                                        padding: 0; 
+                                        box-sizing: border-box; 
+                                        print-color-adjust: exact !important; /* Force les couleurs */
+                                        -webkit-print-color-adjust: exact !important;
+                                    }
+                                    
+                                    body {
+                                        margin: 0;
+                                        padding: 0;
+                                        background: ${this.project.theme.colors.background};
+                                    }
+                                    
+                                    /* === OPTIMISATIONS POUR L'IMPRESSION === */
+                                    @media print {
+                                        /* Configuration de base */
+                                        html, body {
+                                            width: 100%;
+                                            margin: 0 !important;
+                                            padding: 0 !important;
+                                            background: ${this.project.theme.colors.background} !important;
+                                        }
+                                        
+                                        .preview-container {
+                                            box-shadow: none !important;
+                                            border-radius: 0 !important;
+                                            page-break-inside: avoid !important;
+                                            page-break-after: avoid !important;
+                                            width: 100% !important;
+                                            max-width: 100% !important;
+                                            margin: 0 !important;
+                                            padding: 0 !important;
+                                        }
+                                        
+                                        /* Header - taille raisonnable */
+                                        .preview-header {
+                                            padding: 20px 20px !important;
+                                            position: relative !important;
+                                        }
+                                        
+                                        .preview-header::before {
+                                            font-size: 60px !important;
+                                            margin-bottom: 15px !important;
+                                        }
+                                        
+                                        .preview-header h1 {
+                                            font-size: 2.2em !important;
+                                            margin-bottom: 10px !important;
+                                        }
+                                        
+                                        .preview-header p {
+                                            font-size: 1em !important;
+                                        }
+                                        
+                                        /* Logos du header */
+                                        .preview-header .logo {
+                                            position: absolute !important;
+                                            max-height: 70px !important;
+                                            top: 20px !important;
+                                            bottom: auto !important;
+                                        }
+                                        
+                                        .preview-header .logo.top-left {
+                                            left: 20px !important;
+                                            right: auto !important;
+                                        }
+                                        
+                                        .preview-header .logo.top-right {
+                                            right: 20px !important;
+                                            left: auto !important;
+                                        }
+                                        
+                                        .preview-header .logo.top-center {
+                                            left: 50% !important;
+                                            right: auto !important;
+                                            transform: translateX(-50%) !important;
+                                        }
+                                        
+                                        /* Timeline */
+                                        .preview-timeline {
+                                            margin: 18px 0 !important;
+                                            padding: 0 20px !important;
+                                        }
+                                        
+                                        .preview-timeline-item {
+                                            padding: 10px 18px !important;
+                                            margin: 6px !important;
+                                            font-size: 0.9em !important;
+                                        }
+                                        
+                                        /* Grille des étapes - optimisée mais lisible */
+                                        .preview-steps-grid {
+                                            padding: 18px !important;
+                                            gap: 18px !important;
+                                            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
+                                        }
+                                        
+                                        /* Steps */
+                                        .preview-step {
+                                            padding: 18px !important;
+                                            page-break-inside: avoid !important;
+                                        }
+                                        
+                                        .preview-step-number {
+                                            width: 40px !important;
+                                            height: 40px !important;
+                                            font-size: 1.2em !important;
+                                            top: -18px !important;
+                                        }
+                                        
+                                        .preview-step-icon {
+                                            font-size: 3em !important;
+                                            margin-bottom: 15px !important;
+                                        }
+                                        
+                                        .preview-step h3 {
+                                            font-size: 1.35em !important;
+                                            margin-bottom: 14px !important;
+                                        }
+                                        
+                                        .preview-action-item {
+                                            padding: 12px !important;
+                                            margin: 10px 0 !important;
+                                            font-size: 0.9em !important;
+                                            line-height: 1.4 !important;
+                                        }
+                                        
+                                        /* Contact d'urgence */
+                                        .preview-emergency-contact {
+                                            padding: 18px 20px !important;
+                                            margin: 18px 20px !important;
+                                            font-size: 1.05em !important;
+                                            page-break-inside: avoid !important;
+                                        }
+                                        
+                                        /* Footer */
+                                        .preview-footer {
+                                            padding: 18px 20px !important;
+                                            font-size: 0.9em !important;
+                                            line-height: 1.4 !important;
+                                            position: relative !important;
+                                            min-height: 80px !important;
+                                        }
+                                        
+                                        .preview-footer p {
+                                            margin: 4px 0 !important;
+                                        }
+                                        
+                                        /* Logos du footer - positionnement corrigé */
+                                        .preview-footer .logo {
+                                            position: absolute !important;
+                                            max-height: 70px !important;
+                                            bottom: 18px !important;
+                                            top: auto !important;
+                                            transform: none !important;
+                                        }
+                                        
+                                        .preview-footer .logo.bottom-left {
+                                            left: 20px !important;
+                                            right: auto !important;
+                                        }
+                                        
+                                        .preview-footer .logo.bottom-right {
+                                            right: 20px !important;
+                                            left: auto !important;
+                                        }
+                                        
+                                        .preview-footer .logo.bottom-center {
+                                            left: 50% !important;
+                                            right: auto !important;
+                                            transform: translateX(-50%) !important;
+                                        }
+                                        
+                                        /* Règle générale pour les logos non spécifiés */
+                                        .logo {
+                                            max-height: 70px !important;
+                                        }
+                                        
+                                        /* Images */
+                                        img {
+                                            max-width: 100% !important;
+                                            height: auto !important;
+                                            page-break-inside: avoid !important;
+                                        }
+                                        
+                                        /* Forcer les couleurs */
+                                        * {
+                                            print-color-adjust: exact !important;
+                                            -webkit-print-color-adjust: exact !important;
+                                        }
+                                    }
+                                    
+                                    /* === STYLES IMPORTÉS DU GÉNÉRATEUR === */
+                                    ${ExportManager.getBaseStyles(this.project)}
+                                    
+                                    /* === STYLES PERSONNALISÉS === */
+                                    ${ExportManager.generateCustomStyles(this.project)}
+                                </style>
+                            </head>
+                            <body>
+                                ${clone.outerHTML}
+                                
+                                <script>
+                                    // Attendre le chargement complet avant d'imprimer
+                                    window.onload = function() {
+                                        // Attendre le chargement des images
+                                        const images = document.querySelectorAll('img');
+                                        let loadedCount = 0;
+                                        
+                                        function tryPrint() {
+                                            setTimeout(() => {
+                                                window.print();
+                                                // Fermer après impression (optionnel)
+                                                setTimeout(() => window.close(), 1000);
+                                            }, 500);
+                                        }
+                                        
+                                        if (images.length === 0) {
+                                            // Pas d'images, imprimer directement
+                                            tryPrint();
+                                        } else {
+                                            // Attendre le chargement des images
+                                            images.forEach(img => {
+                                                if (img.complete) {
+                                                    loadedCount++;
+                                                } else {
+                                                    img.onload = () => {
+                                                        loadedCount++;
+                                                        if (loadedCount === images.length) {
+                                                            tryPrint();
+                                                        }
+                                                    };
+                                                    img.onerror = () => {
+                                                        loadedCount++;
+                                                        if (loadedCount === images.length) {
+                                                            tryPrint();
+                                                        }
+                                                    };
+                                                }
+                                            });
+                                            
+                                            // Si toutes les images sont déjà chargées
+                                            if (loadedCount === images.length) {
+                                                tryPrint();
+                                            }
+                                        }
+                                    };
+                                <\/script>
+                            </body>
+                            </html>
+                        `);
                         
-                        const selectedFormat = formats[this.pdfFormat][this.pdfOrientation];
-                        const pxPerMm = 11.811; // 300 DPI
-                        
-                        // Dimensions cibles en pixels pour 300 DPI
-                        const targetWidth = selectedFormat.w * pxPerMm;
-                        const targetHeight = selectedFormat.h * pxPerMm;
-                        
-                        // Calculer le scale nécessaire basé sur la largeur du preview
-                        const previewWidth = preview.offsetWidth;
-                        const scale = targetWidth / previewWidth;
-                        
-                        // Générer canvas haute résolution
-                        const canvas = await html2canvas(preview, {
-                            scale: scale,
-                            useCORS: true,
-                            allowTaint: true,
-                            backgroundColor: this.project.theme.colors.background,
-                            width: previewWidth,
-                            height: preview.scrollHeight,
-                            logging: false,
-                            removeContainer: true
-                        });
-                        
-                        // Créer PDF
-                        const { jsPDF } = window.jspdf;
-                        const pdf = new jsPDF({
-                            orientation: this.pdfOrientation,
-                            unit: 'mm',
-                            format: this.pdfFormat.toLowerCase()
-                        });
-                        
-                        // Dimensions de la page PDF
-                        const pageWidth = pdf.internal.pageSize.getWidth();
-                        const pageHeight = pdf.internal.pageSize.getHeight();
-                        
-                        // Convertir canvas en image
-                        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                        
-                        // Calculer dimensions pour fit sur 1 page avec marges
-                        const margin = 10; // 10mm de marge
-                        const availableWidth = pageWidth - (margin * 2);
-                        const availableHeight = pageHeight - (margin * 2);
-                        
-                        // Ratio de l'image
-                        const imgRatio = canvas.height / canvas.width;
-                        
-                        // Calculer dimensions finales en respectant le ratio
-                        let finalWidth = availableWidth;
-                        let finalHeight = availableWidth * imgRatio;
-                        
-                        // Si trop haut, ajuster par la hauteur
-                        if (finalHeight > availableHeight) {
-                            finalHeight = availableHeight;
-                            finalWidth = finalHeight / imgRatio;
-                        }
-                        
-                        // Centrer sur la page
-                        const x = (pageWidth - finalWidth) / 2;
-                        const y = (pageHeight - finalHeight) / 2;
-                        
-                        // Ajouter l'image au PDF
-                        pdf.addImage(imgData, 'JPEG', x, y, finalWidth, finalHeight);
-                        
-                        // Sauvegarder
-                        const filename = `${this.project.metadata.name.replace(/[^a-zA-Z0-9]/g, '_')}_${this.pdfFormat}_${this.pdfOrientation}_${new Date().toISOString().split('T')[0]}.pdf`;
-                        pdf.save(filename);
+                        printWindow.document.close();
                         
                         this.showExportModal = false;
-                        
-                        // Petit délai avant la notification de succès pour éviter la collision
-                        await new Promise(resolve => setTimeout(resolve, 200));
-                        this.showSuccess('✅ PDF généré avec succès !');
+                        this.showSuccess('🖨️ Dialogue d\'impression ouvert ! Choisissez "Enregistrer en PDF"');
                         
                     } catch (error) {
-                        console.error('Erreur PDF:', error);
-                        this.showError('❌ Erreur lors de la génération du PDF');
+                        console.error('Erreur Print PDF:', error);
+                        this.showError('❌ Erreur lors de l\'ouverture du dialogue d\'impression');
                     }
                 },
                 
@@ -3017,21 +3362,115 @@
                     
                     try {
                         const preview = document.getElementById('preview-container');
+                        const stepsGrid = preview.querySelector('.preview-steps-grid');
                         
+                        //  CALCUL DU NOMBRE DE COLONNES SELON LE NOMBRE D'ÉTAPES
+                        const stepCount = this.project.elements.steps.length;
+                        let columnCount;
+                        let containerWidth;
+                        let paperFormat;
+                        
+                        // Hauteur approximative du container (à ajuster selon votre contenu)
+                        const estimatedHeight = 1400; // px
+                        
+                        if (stepCount >= 1 && stepCount <= 4) {
+                            columnCount = 2;
+                            containerWidth = Math.round(estimatedHeight / 1.414);  // Portrait A4
+                            paperFormat = 'A4';
+                        } else if (stepCount >= 5 && stepCount <= 9) {
+                            columnCount = 3;
+                            containerWidth = Math.round(estimatedHeight * 1.414);  // Paysage A3
+                            paperFormat = 'A3';
+                        } else if (stepCount >= 10 && stepCount <= 16) {
+                            columnCount = 4;
+                            containerWidth = Math.round(estimatedHeight * 1.414 * 1.4);  // Paysage A2
+                            paperFormat = 'A2';
+                        } else {
+                            columnCount = 4;
+                            containerWidth = Math.round(estimatedHeight * 1.414 * 1.4);
+                            paperFormat = 'A2';
+                        }
+                        
+                        // SAUVEGARDER LES STYLES ORIGINAUX
+                        const originalGridStyle = stepsGrid.style.gridTemplateColumns;
+                        const originalContainerWidth = preview.style.width;
+                        const originalContainerMaxWidth = preview.style.maxWidth;
+                        const originalContainerMinWidth = preview.style.minWidth;
+                        const originalContainerOverflow = preview.style.overflow;
+                        const originalContainerBoxSizing = preview.style.boxSizing;
+                        
+                        // APPLIQUER LES NOUVEAUX STYLES POUR L'EXPORT
+                        stepsGrid.style.gridTemplateColumns = `repeat(${columnCount}, 1fr)`;
+                        preview.style.width = `${containerWidth}px`;
+                        preview.style.maxWidth = `${containerWidth}px`;
+                        preview.style.minWidth = `${containerWidth}px`;
+                        preview.style.overflow = 'hidden'; // ⭐ Crucial pour éviter les débordements
+                        preview.style.boxSizing = 'border-box'; // ⭐ Inclut padding et border dans la largeur
+                        
+                        // FORCER LES LOGOS À RESTER DANS LE CONTAINER
+                        const logos = preview.querySelectorAll('.logo');
+                        const originalLogoStyles = [];
+                        
+                        logos.forEach((logo, index) => {
+                            originalLogoStyles[index] = {
+                                maxWidth: logo.style.maxWidth,
+                                maxHeight: logo.style.maxHeight
+                            };
+                            
+                            // Limiter la taille des logos pour éviter débordement
+                            logo.style.maxWidth = '120px';
+                            logo.style.maxHeight = '120px';
+                        });
+                        
+                        // FORCER UN REFLOW DU DOM
+                        void preview.offsetHeight; // Force browser reflow
+                        
+                        // Attendre que le DOM soit complètement mis à jour
+                        await new Promise(resolve => setTimeout(resolve, 250));
+                        
+                        // VÉRIFIER LA LARGEUR RÉELLE AVANT CAPTURE
+                        const actualWidth = preview.getBoundingClientRect().width;
+                        console.log(`Largeur demandée: ${containerWidth}px, Largeur réelle: ${actualWidth}px`);
+                        
+                        // Générer le canvas avec la nouvelle disposition
                         const canvas = await html2canvas(preview, {
-                            scale: 4,
+                            scale: 4, // 300 DPI (4x pour qualité impression)
                             useCORS: true,
                             allowTaint: true,
-                            backgroundColor: '#ffffff',
+                            backgroundColor: this.project.theme.colors.background || '#ffffff',
                             logging: false,
-                            removeContainer: true
+                            removeContainer: true,
+                            windowWidth: containerWidth,
+                            windowHeight: preview.scrollHeight,
+                            width: containerWidth, // ⭐ Forcer la largeur exacte
+                            height: preview.scrollHeight,
+                            x: 0,
+                            y: 0,
+                            scrollX: 0,
+                            scrollY: 0
+                        });
+                        
+                        //  RESTAURER LES STYLES ORIGINAUX
+                        stepsGrid.style.gridTemplateColumns = originalGridStyle;
+                        preview.style.width = originalContainerWidth;
+                        preview.style.maxWidth = originalContainerMaxWidth;
+                        preview.style.minWidth = originalContainerMinWidth;
+                        preview.style.overflow = originalContainerOverflow;
+                        preview.style.boxSizing = originalContainerBoxSizing;
+                        
+                        // Restaurer les styles des logos
+                        logos.forEach((logo, index) => {
+                            if (originalLogoStyles[index]) {
+                                logo.style.maxWidth = originalLogoStyles[index].maxWidth;
+                                logo.style.maxHeight = originalLogoStyles[index].maxHeight;
+                            }
                         });
                         
                         canvas.toBlob(blob => {
                             const url = URL.createObjectURL(blob);
                             const a = document.createElement('a');
                             a.href = url;
-                            const filename = `${this.project.metadata.name.replace(/[^a-zA-Z0-9]/g, '_')}_300dpi_${new Date().toISOString().split('T')[0]}.png`;
+                            const filename = `${this.project.metadata.name.replace(/[^a-zA-Z0-9]/g, '_')}_${paperFormat}_${columnCount}col_${containerWidth}px_300dpi_${new Date().toISOString().split('T')[0]}.png`;
                             a.download = filename;
                             a.click();
                             URL.revokeObjectURL(url);
@@ -3040,7 +3479,7 @@
                             
                             // Petit délai avant la notification de succès
                             setTimeout(() => {
-                                this.showSuccess('✅ PNG généré avec succès !');
+                                this.showSuccess(`✅ PNG généré ! Format ${paperFormat} (${stepCount} étapes, ${columnCount} colonnes, ${containerWidth}px)`);
                             }, 200);
                         }, 'image/png', 1.0);
                         
@@ -3049,7 +3488,7 @@
                         this.showError('❌ Erreur lors de la génération du PNG');
                     }
                 },
-                
+
                 /**
                  * Gère le chargement d'un fichier projet
                  * @param {Event} event - Événement du fichier
