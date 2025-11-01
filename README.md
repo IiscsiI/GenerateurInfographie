@@ -1622,34 +1622,9 @@ function maFonction(param) {
 
 ---
 
-## 🗓️ Roadmap
-
-### Version 1.7 (Q2 2025)
-- [ ] 🌍 Internationalisation (EN, ES, DE)
-- [ ] 🎨 Thèmes personnalisables (import/export)
-- [ ] 📊 Export PPTX (PowerPoint)
-- [ ] 🔌 API REST pour intégration
-- [ ] 📱 Version mobile responsive
-
-### Version 2.0 (Q4 2025)
-- [ ] 🗄️ Backend optionnel (sauvegarde cloud)
-- [ ] 👥 Collaboration temps réel
-- [ ] 📚 Bibliothèque de templates
-- [ ] 🤖 Suggestions IA
-- [ ] 📈 Analytics d'usage
-
-### Long terme
-- [ ] 🎓 Formation intégrée
-- [ ] 🔗 Intégration SIRP/SIEM
-- [ ] 📄 Génération de procédures complètes
-- [ ] 🎮 Mode simulation
-- [ ] 🏆 Certifications compatibles
-
----
-
 **⭐ Si ce projet vous est utile, n'hésitez pas à le star sur GitHub !**
 
-**💌 Pour toute question : [votre-email@domaine.fr]**
+**💌 Pour toute question : [laissez moi une demande sur github]**
 
 ---
 
