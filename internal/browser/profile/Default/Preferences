@@ -1,0 +1,23 @@
+{
+  "browser": {
+    "has_seen_welcome_page": true,
+    "check_default_browser": false,
+    "should_reset_check_default_browser": false
+  },
+  "first_run_tabs": [],
+  "profile": {
+    "name": "Infographic Generator",
+    "created_by_version": "130.0.0.0",
+    "default_content_setting_values": {}
+  },
+  "session": {
+    "restore_on_startup": 4,
+    "startup_urls": []
+  },
+  "sync": {
+    "has_setup_completed": false
+  },
+  "translate": {
+    "enabled": false
+  }
+}

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Render</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.5;
+            color: #2c3e50;
+            background: white;
+        }
+
+        /* ============================================
+           BASE STYLES (shared portrait + landscape)
+           ============================================ */
+        .preview-container {
+            margin: 0 auto; overflow: hidden;
+            min-height: 100vh;
+            display: flex; flex-direction: column;
+        }
+
+        .preview-header { color: white; text-align: center; position: relative; }
+        .preview-header::before { content: '\26A0\FE0F'; display: block; }
+        .preview-header.hide-icon::before { display: none; }
+        .preview-header h1 { font-weight: 900; text-shadow: 2px 2px 4px rgba(0,0,0,0.4); letter-spacing: 2px; }
+        .preview-header p { opacity: 0.95; font-weight: 500; }
+
+        .preview-header .logo, .preview-footer .logo {
+            position: absolute; max-height: 80px; z-index: 10;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+        .preview-header .logo.top-left { left: 20px; top: 20px; }
+        .preview-header .logo.top-right { right: 20px; top: 20px; }
+        .preview-header .logo.top-center { left: 50%; top: 20px; transform: translateX(-50%); }
+        .preview-footer .logo.bottom-left { left: 20px; bottom: 15px; }
+        .preview-footer .logo.bottom-right { right: 20px; bottom: 15px; }
+        .preview-footer .logo.bottom-center { left: 50%; bottom: 15px; transform: translateX(-50%); }
+
+        .preview-timeline { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; }
+        .preview-timeline-item { color: white; border-radius: 30px; font-weight: 700; box-shadow: 0 3px 10px rgba(0,0,0,0.2); }
+
+        .preview-steps-grid { display: grid; flex: 1; align-content: start; }
+        .preview-step {
+            background: white; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            border-left: 6px solid; position: relative;
+        }
+        .preview-step-number {
+            position: absolute; color: white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .preview-step h3 { color: #2c3e50; font-weight: 800; line-height: 1.2; }
+        .preview-action-item {
+            border-radius: 10px; border-left: 4px solid; font-weight: 600;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        }
+        .preview-emergency-contact {
+            color: white; border-radius: 12px; text-align: center;
+            font-weight: 700; box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        .preview-footer { color: white; text-align: center; position: relative; margin-top: auto; }
+
+        /* ============================================
+           PORTRAIT MODE (default)
+           ============================================ */
+        body.portrait .preview-container { max-width: 1200px; }
+
+        body.portrait .preview-header { padding: 45px 30px; }
+        body.portrait .preview-header::before { font-size: 70px; margin-bottom: 20px; }
+        body.portrait .preview-header h1 { font-size: 2.8em; margin-bottom: 12px; }
+        body.portrait .preview-header p { font-size: 1.2em; }
+
+        body.portrait .preview-timeline { margin: 25px 0; padding: 0 20px; }
+        body.portrait .preview-timeline-item { padding: 10px 22px; margin: 6px; font-size: 0.95em; }
+
+        body.portrait .preview-steps-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px; padding: 40px;
+        }
+        body.portrait .preview-step { padding: 30px; }
+        body.portrait .preview-step-number { top: -18px; left: 22px; width: 44px; height: 44px; font-size: 1.3em; }
+        body.portrait .preview-step-icon { font-size: 3.5em; margin-bottom: 20px; }
+        body.portrait .preview-step h3 { font-size: 1.4em; margin-bottom: 16px; }
+        body.portrait .preview-action-item { padding: 14px; margin: 12px 0; font-size: 0.95em; }
+
+        body.portrait .preview-emergency-contact { padding: 25px; margin: 25px 40px; font-size: 1.1em; }
+        body.portrait .preview-footer { padding: 35px 25px; line-height: 1.5; font-size: 1em; }
+
+        /* ============================================
+           LANDSCAPE MODE
+           ============================================ */
+        body.landscape .preview-container { max-width: none; }
+
+        /* Compact header: smaller, tighter */
+        body.landscape .preview-header { padding: 25px 30px; }
+        body.landscape .preview-header::before { font-size: 45px; margin-bottom: 8px; }
+        body.landscape .preview-header h1 { font-size: 2em; margin-bottom: 6px; }
+        body.landscape .preview-header p { font-size: 1em; }
+        body.landscape .preview-header .logo { max-height: 60px; }
+
+        /* Timeline: compact inline */
+        body.landscape .preview-timeline { margin: 12px 0; padding: 0 15px; }
+        body.landscape .preview-timeline-item { padding: 6px 14px; margin: 3px; font-size: 0.8em; }
+
+        /* Steps: all on one row, or auto-fit with larger min */
+        body.landscape .preview-steps-grid {
+            gap: 18px; padding: 20px 25px;
+        }
+        body.landscape .preview-step { padding: 18px 16px; border-radius: 12px; }
+        body.landscape .preview-step-number { top: -14px; left: 14px; width: 34px; height: 34px; font-size: 1em; }
+        body.landscape .preview-step-icon { font-size: 2em; margin-bottom: 10px; }
+        body.landscape .preview-step h3 { font-size: 1em; margin-bottom: 8px; }
+        body.landscape .preview-action-item { padding: 8px 10px; margin: 6px 0; font-size: 0.78em; border-left-width: 3px; }
+
+        /* Compact emergency + footer */
+        body.landscape .preview-emergency-contact { padding: 14px; margin: 12px 20px; font-size: 0.9em; border-radius: 8px; }
+        body.landscape .preview-footer { padding: 18px 25px; font-size: 0.85em; line-height: 1.4; }
+        body.landscape .preview-footer .logo { max-height: 45px; }
+    </style>
+</head>
+<body>
+    <div id="render-root"></div>
+    <div id="infographic-ready" style="display:none;"></div>
+
+    <script>
+        const PROJECT = "%%PROJECT_DATA%%";
+
+        // Read layout params from URL
+        const params = new URLSearchParams(window.location.search);
+        const orientation = params.get('orientation') || 'portrait';
+        const stepCount = (PROJECT.elements && PROJECT.elements.steps) ? PROJECT.elements.steps.length : 4;
+
+        // Apply orientation class to body
+        document.body.className = orientation;
+
+        // Landscape columns: 1→1, 2→2, 3-9→3, >9→4.
+        function getLandscapeCols(n) {
+            if (n <= 1) return 1;
+            if (n === 2) return 2;
+            if (n <= 9) return 3;
+            return 4;
+        }
+
+        if (orientation === 'landscape') {
+            const cols = getLandscapeCols(stepCount);
+            const style = document.createElement('style');
+            style.textContent = `body.landscape .preview-steps-grid { grid-template-columns: repeat(${cols}, 1fr); }`;
+            document.head.appendChild(style);
+        }
+
+        // --- Color helpers ---
+        const categoryPresets = {
+            immediate:     { border: '#e74c3c', background: '#ffffff', text: '#2c3e50' },
+            management:    { border: '#0056b3', background: '#ffffff', text: '#2c3e50' },
+            communication: { border: '#f39c12', background: '#ffffff', text: '#2c3e50' },
+            continuity:    { border: '#27ae60', background: '#ffffff', text: '#2c3e50' }
+        };
+        const actionTypePresets = {
+            critical:  { border: '#e74c3c', background: 'rgba(231, 76, 60, 0.08)' },
+            important: { border: '#f39c12', background: 'rgba(243, 156, 18, 0.08)' },
+            info:      { border: '#3498db', background: 'rgba(52, 152, 219, 0.08)' },
+            success:   { border: '#27ae60', background: 'rgba(39, 174, 96, 0.08)' }
+        };
+
+        function getStepColor(step, type) {
+            if (step.customColors && step.customColors[type]) return step.customColors[type];
+            const preset = categoryPresets[step.category];
+            if (preset && preset[type]) return preset[type];
+            return { border: '#3498db', background: '#ffffff', text: '#2c3e50' }[type] || '#ffffff';
+        }
+        function getActionColor(action, type) {
+            const preset = actionTypePresets[action.type];
+            if (preset && preset[type]) return preset[type];
+            return type === 'border' ? '#3498db' : 'rgba(52,152,219,0.08)';
+        }
+        function adjustBrightness(hex, amount) {
+            if (!hex || hex.length !== 7) return hex;
+            const num = parseInt(hex.slice(1), 16);
+            let r = Math.min(255, Math.max(0, (num >> 16) + amount));
+            let g = Math.min(255, Math.max(0, ((num >> 8) & 0xFF) + amount));
+            let b = Math.min(255, Math.max(0, (num & 0xFF) + amount));
+            return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+        }
+        function esc(s) {
+            const d = document.createElement('div');
+            d.textContent = s || '';
+            return d.innerHTML;
+        }
+
+        // Sanitizer - same whitelist as editor (defense in depth)
+        const ALLOWED_RENDER_TAGS = {
+            STRONG:[], B:[], EM:[], I:[], U:[], S:[], STRIKE:[], BR:[],
+            P:['style'], DIV:['style'], SPAN:['style'],
+            LABEL:[], INPUT:['type','checked','disabled']
+        };
+        const ALLOWED_RENDER_STYLES = ['color','text-align','font-weight','font-style','text-decoration'];
+        function sanitizeRenderHTML(dirty) {
+            if (!dirty) return '';
+            const tmpl = document.createElement('template');
+            tmpl.innerHTML = String(dirty).replace(/\n/g, '<br>');
+            sanitizeRenderNode(tmpl.content);
+            return tmpl.innerHTML;
+        }
+        function sanitizeRenderNode(node) {
+            const kids = Array.from(node.childNodes);
+            for (const k of kids) {
+                if (k.nodeType === 3) continue;
+                if (k.nodeType !== 1) { k.remove(); continue; }
+                const tag = k.tagName;
+                if (!ALLOWED_RENDER_TAGS[tag]) {
+                    while (k.firstChild) k.parentNode.insertBefore(k.firstChild, k);
+                    k.remove();
+                    continue;
+                }
+                if (tag === 'INPUT') {
+                    const type = (k.getAttribute('type') || '').toLowerCase();
+                    if (type !== 'checkbox') { k.remove(); continue; }
+                }
+                const allowed = ALLOWED_RENDER_TAGS[tag];
+                for (const attr of Array.from(k.attributes)) {
+                    const name = attr.name.toLowerCase();
+                    if (!allowed.includes(name)) { k.removeAttribute(attr.name); continue; }
+                    if (name === 'style') {
+                        const clean = sanitizeRenderStyle(attr.value);
+                        if (clean) k.setAttribute('style', clean);
+                        else k.removeAttribute('style');
+                    }
+                    if (tag === 'INPUT' && name === 'type') k.setAttribute('type', 'checkbox');
+                }
+                sanitizeRenderNode(k);
+            }
+        }
+        function sanitizeRenderStyle(s) {
+            if (!s) return '';
+            const out = [];
+            for (const decl of s.split(';')) {
+                const i = decl.indexOf(':');
+                if (i < 0) continue;
+                const prop = decl.slice(0, i).trim().toLowerCase();
+                const val = decl.slice(i + 1).trim();
+                if (!ALLOWED_RENDER_STYLES.includes(prop)) continue;
+                if (/expression\s*\(|url\s*\(|@import|javascript:/i.test(val)) continue;
+                if (!/^[a-zA-Z0-9#.,()\s%\-_']+$/.test(val)) continue;
+                out.push(`${prop}:${val}`);
+            }
+            return out.join(';');
+        }
+
+        function render() {
+            const p = PROJECT;
+            const c = p.theme.colors;
+            const fontSize = (p.theme && p.theme.fontSize) ? p.theme.fontSize : 100;
+            const fontFamily = (p.theme && p.theme.fontFamily && p.theme.fontFamily !== 'system') ? p.theme.fontFamily : '';
+            let html = '';
+
+            const headerClass = p.content.showHeaderIcon ? 'preview-header' : 'preview-header hide-icon';
+            const fontStyle = fontFamily ? `;font-family:${fontFamily}` : '';
+            html += `<div class="preview-container" style="background:${c.contentBg};font-size:${fontSize}%${fontStyle}">`;
+            html += `<div class="${headerClass}" style="background:linear-gradient(135deg,${c.header},${adjustBrightness(c.header,-20)})">`;
+
+            (p.elements.logos || []).forEach(logo => {
+                const src = logo.file || logo.url;
+                if (src && logo.position && logo.position.startsWith('top')) {
+                    html += `<img src="${esc(src)}" class="logo ${logo.position}" style="max-width:${logo.size}px" alt="Logo">`;
+                }
+            });
+            html += `<h1>${sanitizeRenderHTML(p.content.title)}</h1>`;
+            html += `<p>${sanitizeRenderHTML(p.content.subtitle)}</p></div>`;
+
+            if (p.elements.timeline && p.elements.timeline.length) {
+                html += '<div class="preview-timeline">';
+                p.elements.timeline.forEach(item => {
+                    if (item.type === 'item') {
+                        html += `<div class="preview-timeline-item" style="background:linear-gradient(135deg,${c.timeline},${adjustBrightness(c.timeline,-15)})">${esc(item.text)}</div>`;
+                    } else {
+                        html += `<div class="preview-timeline-item" style="background:transparent;color:${c.timeline};font-size:1.2em;">${esc(item.text)}</div>`;
+                    }
+                });
+                html += '</div>';
+            }
+
+            html += `<div class="preview-steps-grid" style="background:${c.contentBg}">`;
+            (p.elements.steps || []).forEach((step, index) => {
+                const bc = getStepColor(step, 'border');
+                const bg = getStepColor(step, 'background');
+                const tc = getStepColor(step, 'text');
+                html += `<div class="preview-step" style="border-left-color:${bc};background:${bg};color:${tc}">`;
+                html += `<div class="preview-step-number" style="background:linear-gradient(135deg,${c.stepNumber},${adjustBrightness(c.stepNumber,-20)})">${index + 1}</div>`;
+                html += `<div class="preview-step-icon">${step.icon}</div>`;
+                html += `<h3 style="color:${tc}">${esc(step.title)}</h3><div>`;
+                (step.actions || []).forEach(action => {
+                    const ab = getActionColor(action, 'border');
+                    const abg = getActionColor(action, 'background');
+                    html += `<div class="preview-action-item" style="border-left-color:${ab};background:${abg};color:#2c3e50">${sanitizeRenderHTML(action.text)}</div>`;
+                });
+                html += '</div></div>';
+            });
+            html += '</div>';
+
+            if (p.content.emergencyMessage) {
+                html += `<div class="preview-emergency-contact" style="background:linear-gradient(135deg,${c.emergency},${adjustBrightness(c.emergency,-20)})">${sanitizeRenderHTML(p.content.emergencyMessage)}</div>`;
+            }
+
+            html += `<div class="preview-footer" style="background:linear-gradient(135deg,${c.footer},${adjustBrightness(c.footer,-15)})">`;
+            (p.elements.logos || []).forEach(logo => {
+                const src = logo.file || logo.url;
+                if (src && logo.position && logo.position.startsWith('bottom')) {
+                    html += `<img src="${esc(src)}" class="logo ${logo.position}" style="max-width:${logo.size}px" alt="Logo">`;
+                }
+            });
+            html += `<div>${sanitizeRenderHTML(p.content.footerMessage)}</div>`;
+            html += '</div></div>';
+
+            document.getElementById('render-root').innerHTML = html;
+        }
+
+        try { render(); } catch(e) {
+            document.getElementById('render-root').innerHTML = '<div style="padding:40px;color:red;">RENDER ERROR: ' + e.message + '</div>';
+        }
+        setTimeout(() => { document.getElementById('infographic-ready').style.display = 'block'; }, 300);
+    </script>
+</body>
+</html>

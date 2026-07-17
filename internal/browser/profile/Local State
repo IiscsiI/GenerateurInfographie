@@ -1,0 +1,14 @@
+{
+  "browser": {
+    "enabled_labs_experiments": []
+  },
+  "profile": {
+    "info_cache": {
+      "Default": {
+        "name": "Infographic Generator"
+      }
+    },
+    "profiles_created": 1,
+    "profiles_order": ["Default"]
+  }
+}

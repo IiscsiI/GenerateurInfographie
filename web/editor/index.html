@@ -1,0 +1,2278 @@
+<!DOCTYPE html>
+<!--
+    Generateur d'Infographie v2.0 (Go Edition)
+    Editeur frontend - communique avec le serveur Go local
+    Copyright (C) 2025 [Guillemin Pierre-Eric]
+    Licence : AGPL-3.0 (usage public/collectivites) - Commerciale (entreprises)
+-->
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generateur d'Infographie v2.0</title>
+    <link rel="stylesheet" href="/vendor/pickr-nano.min.css">
+    <style>
+        :root {
+            --primary: #0056b3;
+            --secondary: #003d82;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --info: #17a2b8;
+            --light: #f8f9fa;
+            --dark: #343a40;
+            --border-radius: 8px;
+            --box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --transition: all 0.3s ease;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--light) 0%, #e9ecef 100%);
+            min-height: 100vh;
+            line-height: 1.6;
+            color: #2c3e50;
+        }
+        .app-container { display: flex; height: 100vh; overflow: hidden; }
+        .editor-panel {
+            width: 500px; height: 100vh; background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column;
+            position: relative; z-index: 1000;
+        }
+        .editor-header {
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            color: white; padding: 15px 20px; text-align: center; flex-shrink: 0;
+        }
+        .toolbar {
+            background: #f8f9fa; padding: 10px 15px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0;
+            align-items: center;
+        }
+        .toolbar-separator { width: 1px; height: 28px; background: #dee2e6; margin: 0 4px; }
+        .editor-content { flex: 1; overflow-y: auto; padding: 20px; }
+        .btn {
+            padding: 8px 16px; border: none; border-radius: var(--border-radius);
+            cursor: pointer; font-size: 13px; font-weight: 600;
+            transition: var(--transition); display: inline-flex; align-items: center; gap: 6px;
+            white-space: nowrap;
+        }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; }
+        .btn-success { background: linear-gradient(135deg, var(--success), #1e7e34); color: white; }
+        .btn-danger { background: linear-gradient(135deg, var(--danger), #c82333); color: white; }
+        .btn-warning { background: linear-gradient(135deg, var(--warning), #e0a800); color: #212529; }
+        .btn-info { background: linear-gradient(135deg, var(--info), #138496); color: white; }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: #2c3e50; font-size: 13px; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%; padding: 10px; border: 2px solid #e9ecef;
+            border-radius: var(--border-radius); font-size: 13px;
+            transition: var(--transition); font-family: inherit;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,86,179,0.1);
+        }
+        .form-group textarea { resize: vertical; min-height: 70px; }
+        .color-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        .color-input-group { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+        .color-picker-btn {
+            width: 100%; height: 50px; border: 2px solid #e9ecef; border-radius: 10px;
+            cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.1); transition: var(--transition);
+        }
+        .color-picker-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); border-color: var(--primary); }
+        .color-label { font-size: 11px; font-weight: 600; text-align: center; color: #495057; padding: 6px 10px; background: #f8f9fa; border-radius: 6px; }
+
+        /* Steps */
+        .step-wrapper { display: flex; gap: 10px; margin-bottom: 15px; align-items: flex-start; }
+        .step-drag-zone { flex-shrink: 0; padding: 15px 0; display: flex; align-items: flex-start; }
+        .step-wrapper.sortable-ghost { opacity: 0.5; }
+        .step-wrapper.sortable-ghost .step-editor { background: #e3f2fd; }
+        .step-editor { flex: 1; border: 2px solid #e9ecef; border-radius: 12px; padding: 0; background: linear-gradient(135deg, #f8f9fa, white); transition: var(--transition); }
+        .step-editor:hover { border-color: var(--primary); box-shadow: var(--box-shadow); }
+        .step-summary {
+            list-style: none; display: flex; align-items: center; gap: 12px; padding: 15px;
+            cursor: pointer; user-select: none; border-radius: 10px 10px 0 0; transition: background 0.2s;
+        }
+        .step-summary::-webkit-details-marker { display: none; }
+        .step-summary::marker { display: none; }
+        .step-summary:hover { background: rgba(0,86,179,0.05); }
+        .step-summary input { cursor: text; }
+        .collapse-icon { font-size: 13px; color: #6c757d; transition: transform 0.3s ease; margin-left: 8px; flex-shrink: 0; font-weight: bold; }
+        details[open] .collapse-icon { transform: rotate(180deg); }
+        .step-content { padding: 0 15px 15px 15px; animation: slideDown 0.3s ease-out; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .step-number-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 30px; height: 30px; border-radius: 50%;
+            background: var(--primary); color: white; font-weight: 800; font-size: 14px; flex-shrink: 0;
+        }
+        .step-icon-input { width: 70px !important; text-align: center; font-size: 18px; cursor: pointer; }
+        .action-item-editor { border: 2px solid #dee2e6; border-radius: var(--border-radius); padding: 12px; margin-bottom: 12px; background: white; }
+        .action-color-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; padding: 8px; background: white; border-radius: 6px; border: 2px dashed #dee2e6; }
+        .action-color-mini-picker { text-align: center; }
+        .action-color-mini-picker label { display: block; font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: 600; }
+        .action-color-mini-btn { width: 100%; height: 30px; border-radius: 6px; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.1); transition: all 0.2s; }
+        .action-color-mini-btn:hover { transform: scale(1.05); }
+        .drag-handle { cursor: grab; padding: 6px; color: #6c757d; font-size: 18px; }
+        .drag-handle:active { cursor: grabbing; }
+
+        /* Text toolbar - INLINE below textarea, no overlay */
+        .textarea-wrapper { position: relative; }
+        .text-toolbar-inline {
+            display: flex; flex-wrap: wrap; gap: 3px; padding: 5px;
+            background: #f1f3f5; border: 1px solid #dee2e6; border-top: none;
+            border-radius: 0 0 6px 6px; margin-top: -2px;
+        }
+        .text-toolbar-inline .text-toolbar-btn {
+            padding: 3px 7px; border: 1px solid #dee2e6; border-radius: 4px;
+            background: white; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s;
+            line-height: 1;
+        }
+        .text-toolbar-inline .text-toolbar-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+        /* Collapsible editor sections */
+        .section-header {
+            background: linear-gradient(135deg, var(--light), #e9ecef);
+            padding: 12px 15px; margin: 25px -20px 0 -20px;
+            border-left: 4px solid var(--primary); font-weight: 700; color: #2c3e50; font-size: 1.05em;
+            cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between;
+            transition: background 0.2s;
+        }
+        .section-header:hover { background: linear-gradient(135deg, #e9ecef, #dee2e6); }
+        .section-header .section-toggle { font-size: 11px; color: #6c757d; transition: transform 0.3s; }
+        .section-header.collapsed .section-toggle { transform: rotate(-90deg); }
+        .section-body { padding-top: 15px; }
+        .section-body.collapsed { display: none; }
+
+        /* Save status indicator */
+        .save-indicator {
+            font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px;
+            white-space: nowrap; transition: all 0.3s;
+        }
+        .save-indicator.saved { color: #28a745; background: rgba(40,167,69,0.1); }
+        .save-indicator.saving { color: #ffc107; background: rgba(255,193,7,0.1); }
+        .save-indicator.unsaved { color: #6c757d; background: rgba(108,117,125,0.1); }
+
+        /* Category color on editor step cards */
+        .step-editor[data-category="immediate"] { border-left: 4px solid #e74c3c !important; }
+        .step-editor[data-category="management"] { border-left: 4px solid #0056b3 !important; }
+        .step-editor[data-category="communication"] { border-left: 4px solid #f39c12 !important; }
+        .step-editor[data-category="continuity"] { border-left: 4px solid #27ae60 !important; }
+
+        /* Empty state */
+        .preview-empty-state {
+            padding: 60px 30px; text-align: center; color: #adb5bd;
+            font-size: 1.1em; font-style: italic;
+        }
+        .preview-empty-state span { font-size: 3em; display: block; margin-bottom: 15px; opacity: 0.5; }
+
+        /* Template library */
+        .template-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px; margin: 15px 0;
+        }
+        .template-card {
+            border: 2px solid #dee2e6; border-radius: 12px; padding: 20px;
+            cursor: pointer; transition: all 0.2s; background: white;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .template-card:hover { border-color: var(--primary); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+        .template-card-icon {
+            font-size: 2.5em; width: 60px; height: 60px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        .template-card-title { font-weight: 700; color: #2c3e50; font-size: 1.05em; }
+        .template-card-desc { font-size: 0.85em; color: #6c757d; line-height: 1.4; }
+        .text-toolbar-separator { width: 1px; background: #dee2e6; margin: 0 2px; }
+
+        /* Logo preview */
+        .logo-preview { max-width: 120px; max-height: 60px; margin: 10px 0; border: 2px solid #dee2e6; border-radius: var(--border-radius); }
+        .logo-item { border: 2px solid #e9ecef; border-radius: 12px; padding: 12px; margin-bottom: 12px; background: white; }
+
+        /* Emoji selector */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 40000;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white; border-radius: 15px; padding: 25px;
+            max-width: 600px; width: 90%; max-height: 85vh; overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; max-height: 350px; overflow-y: auto; padding: 8px 0; }
+        .emoji-option {
+            padding: 12px; text-align: center; cursor: pointer; border-radius: 6px;
+            font-size: 22px; transition: all 0.2s; background: #f8f9fa; user-select: none;
+        }
+        .emoji-option:hover { background: var(--primary); color: white; transform: scale(1.1); }
+
+        /* Notification */
+        .custom-notification {
+            position: fixed; top: 15px; right: 15px; min-width: 280px; max-width: 380px;
+            padding: 14px 18px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            font-weight: 600; z-index: 60000; display: flex; align-items: center; gap: 10px;
+            animation: slideInRight 0.3s ease-out, fadeOut 0.3s ease-in 2.2s; opacity: 1;
+        }
+        .custom-notification.success { background: linear-gradient(135deg, #28a745, #1e7e34); color: white; }
+        .custom-notification.error { background: linear-gradient(135deg, #dc3545, #c82333); color: white; }
+        .custom-notification.info { background: linear-gradient(135deg, #17a2b8, #138496); color: white; }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+        /* Project selector */
+        .project-selector {
+            display: flex; align-items: center; gap: 8px; padding: 8px 15px;
+            background: #e3f2fd; border-bottom: 1px solid #bbdefb; flex-shrink: 0;
+        }
+        .project-selector select { flex: 1; padding: 6px 10px; border: 1px solid #90caf9; border-radius: 6px; font-size: 13px; }
+
+        /* Export progress */
+        .export-progress {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; padding: 40px; border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3); z-index: 50000; text-align: center;
+        }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e9ecef; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Preview panel scrolls both axes so the preview can overflow on large formats */
+        .preview-panel { flex: 1; overflow: auto; background: var(--light); padding: 20px; height: 100vh; }
+
+        /* ================================================================
+           PREVIEW — fixed object at A-size ratio.
+           Portrait: 900x1272 (1:sqrt(2)). Landscape: 1272x900 (sqrt(2):1).
+           The preview-panel scrolls if the container is larger than the viewport.
+           ================================================================ */
+        .preview-container {
+            margin: 0; border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            overflow: hidden; transition: var(--transition);
+            display: flex; flex-direction: column;
+        }
+        /* Wrapper that allows horizontal scroll to reveal overflowing preview */
+        .preview-scroll-wrapper {
+            display: flex; justify-content: flex-start;
+            min-width: max-content;
+        }
+
+        /* Shared base */
+        .preview-header { color: white; text-align: center; position: relative; }
+        .preview-header::before { content: '\26A0\FE0F'; display: block; animation: pulse 2s infinite; }
+        .preview-header.hide-icon::before { display: none; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .preview-header h1 { font-weight: 900; text-shadow: 2px 2px 4px rgba(0,0,0,0.4); letter-spacing: 2px; }
+        .preview-header p { opacity: 0.95; font-weight: 500; }
+        .preview-header .logo, .preview-footer .logo {
+            position: absolute; max-height: 80px; z-index: 10;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+        .preview-header .logo.top-left { left: 20px; top: 20px; }
+        .preview-header .logo.top-right { right: 20px; top: 20px; }
+        .preview-header .logo.top-center { left: 50%; top: 20px; transform: translateX(-50%); }
+        .preview-footer .logo.bottom-left { left: 20px; bottom: 15px; }
+        .preview-footer .logo.bottom-right { right: 20px; bottom: 15px; }
+        .preview-footer .logo.bottom-center { left: 50%; bottom: 15px; transform: translateX(-50%); }
+
+        .preview-timeline { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; }
+        .preview-timeline-item { color: white; border-radius: 30px; font-weight: 700; box-shadow: 0 3px 10px rgba(0,0,0,0.2); }
+
+        .preview-steps-grid { display: grid; flex: 1; align-content: start; }
+        .preview-step {
+            background: white; border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            border-left: 6px solid; position: relative; transition: var(--transition);
+        }
+        .preview-step:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(0,0,0,0.12); }
+        .preview-step-number {
+            position: absolute; color: white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .preview-step h3 { color: #2c3e50; font-weight: 800; line-height: 1.2; }
+        .preview-action-item {
+            border-radius: 10px; border-left: 4px solid; font-weight: 600;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06); transition: var(--transition);
+        }
+        .preview-action-item:hover { transform: translateX(3px); box-shadow: 0 4px 10px rgba(0,0,0,0.10); }
+        .preview-emergency-contact {
+            color: white; border-radius: 12px; text-align: center;
+            font-weight: 700; box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        .preview-footer { color: white; text-align: center; position: relative; margin-top: auto; }
+
+        /* Portrait: fixed 900×1272 (ratio 1:√2, approximate A-size at 76 DPI) */
+        .preview-panel[data-orientation="portrait"] .preview-container {
+            width: 900px; height: 1272px;
+            flex-shrink: 0;
+        }
+        .preview-panel[data-orientation="portrait"] .preview-header { padding: 45px 30px; }
+        .preview-panel[data-orientation="portrait"] .preview-header::before { font-size: 70px; margin-bottom: 20px; }
+        .preview-panel[data-orientation="portrait"] .preview-header h1 { font-size: 2.8em; margin-bottom: 12px; }
+        .preview-panel[data-orientation="portrait"] .preview-header p { font-size: 1.2em; }
+        .preview-panel[data-orientation="portrait"] .preview-timeline { margin: 25px 0; padding: 0 20px; }
+        .preview-panel[data-orientation="portrait"] .preview-timeline-item { padding: 10px 22px; margin: 6px; font-size: 0.95em; }
+        .preview-panel[data-orientation="portrait"] .preview-steps-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px; padding: 40px;
+        }
+        .preview-panel[data-orientation="portrait"] .preview-step { padding: 30px; }
+        .preview-panel[data-orientation="portrait"] .preview-step-number { top: -18px; left: 22px; width: 44px; height: 44px; font-size: 1.3em; }
+        .preview-panel[data-orientation="portrait"] .preview-step-icon { font-size: 3.5em; margin-bottom: 20px; }
+        .preview-panel[data-orientation="portrait"] .preview-step h3 { font-size: 1.4em; margin-bottom: 16px; }
+        .preview-panel[data-orientation="portrait"] .preview-action-item { padding: 14px; margin: 12px 0; font-size: 0.95em; }
+        .preview-panel[data-orientation="portrait"] .preview-emergency-contact { padding: 25px; margin: 25px 40px; font-size: 1.1em; }
+        .preview-panel[data-orientation="portrait"] .preview-footer { padding: 35px 25px; line-height: 1.5; font-size: 1em; }
+
+        /* Landscape: fixed 1272×900 (ratio √2:1) */
+        .preview-panel[data-orientation="landscape"] .preview-container {
+            width: 1272px; height: 900px;
+            flex-shrink: 0;
+        }
+        .preview-panel[data-orientation="landscape"] .preview-header { padding: 25px 30px; }
+        .preview-panel[data-orientation="landscape"] .preview-header::before { font-size: 45px; margin-bottom: 8px; }
+        .preview-panel[data-orientation="landscape"] .preview-header h1 { font-size: 2em; margin-bottom: 6px; }
+        .preview-panel[data-orientation="landscape"] .preview-header p { font-size: 1em; }
+        .preview-panel[data-orientation="landscape"] .preview-header .logo { max-height: 60px; }
+        .preview-panel[data-orientation="landscape"] .preview-timeline { margin: 12px 0; padding: 0 15px; }
+        .preview-panel[data-orientation="landscape"] .preview-timeline-item { padding: 6px 14px; margin: 3px; font-size: 0.8em; }
+        .preview-panel[data-orientation="landscape"] .preview-steps-grid { gap: 18px; padding: 20px 25px; }
+        .preview-panel[data-orientation="landscape"] .preview-step { padding: 18px 16px; border-radius: 12px; }
+        .preview-panel[data-orientation="landscape"] .preview-step-number { top: -14px; left: 14px; width: 34px; height: 34px; font-size: 1em; }
+        .preview-panel[data-orientation="landscape"] .preview-step-icon { font-size: 2em; margin-bottom: 10px; }
+        .preview-panel[data-orientation="landscape"] .preview-step h3 { font-size: 1em; margin-bottom: 8px; }
+        .preview-panel[data-orientation="landscape"] .preview-action-item { padding: 8px 10px; margin: 6px 0; font-size: 0.78em; border-left-width: 3px; }
+        .preview-panel[data-orientation="landscape"] .preview-emergency-contact { padding: 14px; margin: 12px 20px; font-size: 0.9em; border-radius: 8px; }
+        .preview-panel[data-orientation="landscape"] .preview-footer { padding: 18px 25px; font-size: 0.85em; line-height: 1.4; }
+        .preview-panel[data-orientation="landscape"] .preview-footer .logo { max-height: 45px; }
+
+        /* Landscape grid column count: driven by previewCols CSS variable set from JS */
+        .preview-panel[data-orientation="landscape"] .preview-steps-grid {
+            grid-template-columns: repeat(var(--preview-cols, 2), 1fr);
+        }
+
+        /* Orientation toggle button group */
+        .orientation-toggle { display: inline-flex; border-radius: 6px; overflow: hidden; border: 1px solid #dee2e6; }
+        .orientation-toggle button {
+            background: white; border: none; padding: 5px 10px;
+            font-size: 11px; font-weight: 600; color: #495057; cursor: pointer;
+            transition: all 0.15s;
+        }
+        .orientation-toggle button.active { background: var(--primary); color: white; }
+        .orientation-toggle button:hover:not(.active) { background: #f1f3f5; }
+
+        .text-center { text-align: center; }
+        .mt-15 { margin-top: 15px; }
+        .mb-15 { margin-bottom: 15px; }
+        .w-100 { width: 100%; }
+
+        /* Theme presets */
+        .theme-presets { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 18px; }
+        .theme-card {
+            border: 2px solid #e9ecef; border-radius: 10px; padding: 10px; cursor: pointer;
+            transition: all 0.2s; text-align: center; font-size: 12px; font-weight: 600;
+        }
+        .theme-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .theme-card-colors { display: flex; gap: 3px; justify-content: center; margin-bottom: 6px; }
+        .theme-card-swatch { width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); }
+
+        /* Action drag */
+        .action-drag-wrapper { display: flex; gap: 6px; align-items: flex-start; }
+        .action-drag-wrapper .action-item-editor { flex: 1; }
+        .action-drag-handle { cursor: grab; padding: 12px 4px; color: #adb5bd; font-size: 14px; flex-shrink: 0; }
+        .action-drag-handle:active { cursor: grabbing; color: var(--primary); }
+        .action-wrapper.sortable-ghost .action-item-editor { background: #e3f2fd; border-color: var(--primary); }
+
+        /* Undo/redo toolbar */
+        .undo-redo-group { display: flex; gap: 2px; }
+        .undo-redo-group .btn { padding: 5px 8px; font-size: 14px; min-width: 32px; justify-content: center; }
+        .undo-redo-group .btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        @media (max-width: 1400px) {
+            .app-container { flex-direction: column; }
+            .editor-panel { width: 100%; max-height: 500px; }
+            .preview-steps-grid { grid-template-columns: 1fr; padding: 30px; }
+        }
+    </style>
+</head>
+<body>
+
+<div x-data="infographicApp()" x-init="init()" class="app-container">
+
+    <!-- EDITOR PANEL -->
+    <div class="editor-panel">
+        <div class="editor-header">
+            <h2 style="font-size: 1.1em;">&#x270F;&#xFE0F; Generateur d'Infographie v2.0</h2>
+        </div>
+
+        <!-- Project selector -->
+        <div class="project-selector">
+            <select x-model="currentProjectId" @change="switchProject($event.target.value)">
+                <option value="">-- Nouveau projet --</option>
+                <template x-for="p in projectList" :key="p.id">
+                    <option :value="p.id" x-text="p.name"></option>
+                </template>
+            </select>
+            <button class="btn btn-sm btn-primary" @click="refreshProjectList()" title="Rafraichir">&#x1F504;</button>
+            <button class="btn btn-sm btn-danger" @click="deleteProject()" x-show="currentProjectId" title="Supprimer ce projet" style="padding:5px 8px;">&#x1F5D1;&#xFE0F;</button>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <button class="btn btn-primary btn-sm" @click="saveProject()">&#x1F4BE; Sauver</button>
+            <button class="btn btn-info btn-sm" @click="$refs.importFile.click()">&#x1F4C2; Importer</button>
+            <div class="undo-redo-group">
+                <button class="btn btn-sm" style="background:#6c757d;color:white;" @click="undo()" :disabled="undoStack.length===0" title="Annuler (Ctrl+Z)">&#x21A9;</button>
+                <button class="btn btn-sm" style="background:#6c757d;color:white;" @click="redo()" :disabled="redoStack.length===0" title="Retablir (Ctrl+Y)">&#x21AA;</button>
+            </div>
+            <div class="toolbar-separator"></div>
+            <!-- Font family selector with visible label -->
+            <div style="display:flex;align-items:center;gap:4px;">
+                <span style="font-size:11px;color:#495057;font-weight:600;">Police :</span>
+                <select x-model="project.theme.fontFamily" style="font-size:11px;padding:4px 6px;max-width:130px;" title="Police du document">
+                    <option value="system">Systeme</option>
+                    <option value="Roboto, sans-serif">Roboto</option>
+                    <option value="'Open Sans', sans-serif">Open Sans</option>
+                    <option value="Montserrat, sans-serif">Montserrat</option>
+                    <option value="Lato, sans-serif">Lato</option>
+                    <option value="Georgia, serif">Georgia (serif)</option>
+                    <option value="'Courier New', monospace">Courier (mono)</option>
+                </select>
+            </div>
+            <!-- Font size control -->
+            <div style="display:flex;align-items:center;gap:3px;">
+                <button class="btn btn-sm" style="background:#495057;color:white;padding:5px 7px;font-size:11px;min-width:26px;" @click="adjustFontSize(-5)" title="Reduire la police">A-</button>
+                <span style="font-size:11px;font-weight:600;color:#495057;min-width:32px;text-align:center;" x-text="project.theme.fontSize + '%'"></span>
+                <button class="btn btn-sm" style="background:#495057;color:white;padding:5px 7px;font-size:11px;min-width:26px;" @click="adjustFontSize(5)" title="Agrandir la police">A+</button>
+            </div>
+            <div class="toolbar-separator"></div>
+            <!-- Save indicator -->
+            <span class="save-indicator" :class="saveStatus"
+                x-text="saveStatus === 'saved' ? 'Sauvegarde \u2713' : saveStatus === 'saving' ? 'Sauvegarde...' : 'Non sauvegarde'"></span>
+            <div class="toolbar-separator"></div>
+            <button class="btn btn-success btn-sm" @click="showExportModal = true">&#x1F4E5; Export</button>
+            <button class="btn btn-info btn-sm" @click="showTemplateLibrary = true" title="Bibliotheque de modeles">&#x1F4DA; Modeles</button>
+            <button class="btn btn-danger btn-sm" @click="newProject()">&#x2795; Nouveau</button>
+            <div class="toolbar-separator"></div>
+            <button class="btn btn-sm" style="background:#17a2b8;color:white;" @click="showHelpModal = true" title="Aide">?</button>
+            <button class="btn btn-sm" style="background:#6c757d;color:white;" @click="quitApp()" title="Arreter le serveur et fermer">&#x23FB; Quitter</button>
+            <input type="file" accept=".json,.html" x-ref="importFile" @change="handleImport($event)" style="display:none;">
+        </div>
+
+        <!-- Editor content -->
+        <div class="editor-content">
+
+            <!-- Metadata -->
+            <div class="section-header" :class="{collapsed: !sections.project}" @click="sections.project = !sections.project">
+                <span>&#x1F4CB; Projet</span>
+                <span class="section-toggle">&#x25BC;</span>
+            </div>
+            <div class="section-body" x-show="sections.project">
+                <div class="form-group">
+                    <label>Nom du projet</label>
+                    <input type="text" x-model="project.metadata.name">
+                </div>
+                <div class="form-group">
+                    <label>Organisation</label>
+                    <input type="text" x-model="project.metadata.organization">
+                </div>
+                <div class="form-group">
+                    <label>Auteur</label>
+                    <input type="text" x-model="project.metadata.author">
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="section-header" :class="{collapsed: !sections.content}" @click="sections.content = !sections.content">
+                <span>&#x1F4DD; Contenu principal</span>
+                <span class="section-toggle">&#x25BC;</span>
+            </div>
+            <div class="section-body" x-show="sections.content">
+                <div class="form-group">
+                    <label>Titre principal</label>
+                    <div class="textarea-wrapper">
+                        <textarea x-model="project.content.title" id="ct-title" style="min-height:45px;border-radius:6px 6px 0 0;"></textarea>
+                        <div class="text-toolbar-inline">
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-title','project.content.title','<strong>','</strong>')" title="Gras"><strong>B</strong></button>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-title','project.content.title','<em>','</em>')" title="Italique"><em>I</em></button>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-title','project.content.title','<u>','</u>')" title="Souligne"><u>U</u></button>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-title','project.content.title','<s>','</s>')" title="Barre"><s>S</s></button>
+                            <div class="text-toolbar-separator"></div>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="pickColorById($event,'ct-title','project.content.title')" title="Couleur" style="color:#dc3545;"><strong>A</strong></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Sous-titre</label>
+                    <div class="textarea-wrapper">
+                        <textarea x-model="project.content.subtitle" id="ct-subtitle" style="min-height:45px;border-radius:6px 6px 0 0;"></textarea>
+                        <div class="text-toolbar-inline">
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-subtitle','project.content.subtitle','<strong>','</strong>')" title="Gras"><strong>B</strong></button>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-subtitle','project.content.subtitle','<em>','</em>')" title="Italique"><em>I</em></button>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-subtitle','project.content.subtitle','<u>','</u>')" title="Souligne"><u>U</u></button>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-subtitle','project.content.subtitle','<s>','</s>')" title="Barre"><s>S</s></button>
+                            <div class="text-toolbar-separator"></div>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="pickColorById($event,'ct-subtitle','project.content.subtitle')" title="Couleur" style="color:#dc3545;"><strong>A</strong></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox" x-model="project.content.showHeaderIcon" style="width:auto;cursor:pointer;">
+                        <span>Afficher l'icone dans l'en-tete</span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>Message d'urgence</label>
+                    <div class="textarea-wrapper">
+                        <textarea x-model="project.content.emergencyMessage" id="ct-emergency" style="border-radius:6px 6px 0 0;"></textarea>
+                        <div class="text-toolbar-inline">
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-emergency','project.content.emergencyMessage','<strong>','</strong>')" title="Gras"><strong>B</strong></button>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-emergency','project.content.emergencyMessage','<em>','</em>')" title="Italique"><em>I</em></button>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-emergency','project.content.emergencyMessage','<u>','</u>')" title="Souligne"><u>U</u></button>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-emergency','project.content.emergencyMessage','<s>','</s>')" title="Barre"><s>S</s></button>
+                            <div class="text-toolbar-separator"></div>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="pickColorById($event,'ct-emergency','project.content.emergencyMessage')" title="Couleur" style="color:#dc3545;"><strong>A</strong></button>
+                            <div class="text-toolbar-separator"></div>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-emergency','project.content.emergencyMessage','<br>','')" title="Saut de ligne">&#x21B5;</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Message de pied de page</label>
+                    <div class="textarea-wrapper">
+                        <textarea x-model="project.content.footerMessage" id="ct-footer" style="border-radius:6px 6px 0 0;"></textarea>
+                        <div class="text-toolbar-inline">
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-footer','project.content.footerMessage','<strong>','</strong>')" title="Gras"><strong>B</strong></button>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-footer','project.content.footerMessage','<em>','</em>')" title="Italique"><em>I</em></button>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-footer','project.content.footerMessage','<u>','</u>')" title="Souligne"><u>U</u></button>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-footer','project.content.footerMessage','<s>','</s>')" title="Barre"><s>S</s></button>
+                            <div class="text-toolbar-separator"></div>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="pickColorById($event,'ct-footer','project.content.footerMessage')" title="Couleur" style="color:#dc3545;"><strong>A</strong></button>
+                            <div class="text-toolbar-separator"></div>
+                            <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTagById('ct-footer','project.content.footerMessage','<br>','')" title="Saut de ligne">&#x21B5;</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Colors -->
+            <div class="section-header" :class="{collapsed: !sections.colors}" @click="sections.colors = !sections.colors">
+                <span>&#x1F3A8; Couleurs et themes</span>
+                <span class="section-toggle">&#x25BC;</span>
+            </div>
+            <div class="section-body" x-show="sections.colors">
+                <label style="font-weight:600;font-size:13px;margin-bottom:8px;display:block;">Themes predefinis</label>
+                <div class="theme-presets">
+                    <template x-for="(theme, name) in themePresets" :key="name">
+                        <div class="theme-card" @click="applyTheme(name)">
+                            <div class="theme-card-colors">
+                                <div class="theme-card-swatch" :style="`background:${theme.header}`"></div>
+                                <div class="theme-card-swatch" :style="`background:${theme.timeline}`"></div>
+                                <div class="theme-card-swatch" :style="`background:${theme.stepNumber}`"></div>
+                                <div class="theme-card-swatch" :style="`background:${theme.footer}`"></div>
+                                <div class="theme-card-swatch" :style="`background:${theme.emergency}`"></div>
+                            </div>
+                            <span x-text="theme._label"></span>
+                        </div>
+                    </template>
+                </div>
+                <label style="font-weight:600;font-size:13px;margin-bottom:8px;display:block;">Personnalisation</label>
+                <div class="color-grid">
+                    <template x-for="(label, key) in colorLabels" :key="key">
+                        <div class="color-input-group">
+                            <div class="color-picker-btn"
+                                 :style="`background-color: ${project.theme.colors[key]}`"
+                                 @click="openGlobalColorPicker(key)"></div>
+                            <label class="color-label" x-text="label"></label>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Logos -->
+            <div class="section-header" :class="{collapsed: !sections.logos}" @click="sections.logos = !sections.logos">
+                <span>&#x1F5BC;&#xFE0F; Logos</span>
+                <span class="section-toggle">&#x25BC;</span>
+            </div>
+            <div class="section-body" x-show="sections.logos">
+                <template x-for="(logo, logoIndex) in project.elements.logos" :key="logo.id">
+                    <div class="logo-item">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <strong x-text="`Logo ${logoIndex + 1}`"></strong>
+                            <button class="btn btn-danger btn-sm" @click="removeLogo(logoIndex)">&#x1F5D1;&#xFE0F;</button>
+                        </div>
+                        <div class="form-group">
+                            <label>Image (upload)</label>
+                            <input type="file" accept="image/*" @change="handleLogoUpload($event, logoIndex)">
+                        </div>
+                        <div class="form-group">
+                            <label>Ou URL directe</label>
+                            <input type="url" x-model="logo.url" placeholder="https://...">
+                        </div>
+                        <template x-if="logo.file || logo.url">
+                            <div>
+                                <img :src="logo.file || logo.url" class="logo-preview" alt="Logo preview">
+                                <div class="form-group">
+                                    <label>Position</label>
+                                    <select x-model="logo.position">
+                                        <option value="top-left">Haut gauche</option>
+                                        <option value="top-center">Haut centre</option>
+                                        <option value="top-right">Haut droite</option>
+                                        <option value="bottom-left">Bas gauche</option>
+                                        <option value="bottom-center">Bas centre</option>
+                                        <option value="bottom-right">Bas droite</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Taille: <span x-text="logo.size + 'px'"></span></label>
+                                    <input type="range" x-model.number="logo.size" min="50" max="300" class="w-100">
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+                <button class="btn btn-success w-100 mt-15" @click="addLogo()">&#x2795; Ajouter un logo</button>
+            </div>
+
+            <!-- Timeline -->
+            <div class="section-header" :class="{collapsed: !sections.timeline}" @click="sections.timeline = !sections.timeline">
+                <span>&#x23F1;&#xFE0F; Timeline</span>
+                <span class="section-toggle">&#x25BC;</span>
+            </div>
+            <div class="section-body" x-show="sections.timeline">
+                <template x-for="(item, index) in project.elements.timeline" :key="item.id">
+                    <div style="display:flex;gap:8px;margin-bottom:8px;">
+                        <select x-model="item.type" style="width:110px;">
+                            <option value="item">&#x1F4CC; Element</option>
+                            <option value="separator">&#x27A1;&#xFE0F; Separateur</option>
+                        </select>
+                        <input type="text" x-model="item.text" style="flex:1;"
+                            @click="if(item.type==='separator') openEmojiSelector('timeline', index)"
+                            :readonly="item.type==='separator'">
+                        <button class="btn btn-danger btn-sm" @click="project.elements.timeline.splice(index, 1)">&#x1F5D1;&#xFE0F;</button>
+                    </div>
+                </template>
+                <button class="btn btn-success w-100 mt-15" @click="addTimelineItem()">&#x2795; Element timeline</button>
+            </div>
+
+            <!-- Steps (always open) -->
+            <div class="section-header" :class="{collapsed: !sections.steps}" @click="sections.steps = !sections.steps">
+                <span>&#x1F4CB; Etapes et actions</span>
+                <span class="section-toggle">&#x25BC;</span>
+            </div>
+            <div class="section-body" x-show="sections.steps">
+            <div style="margin-bottom:12px;text-align:right;">
+                <button class="btn btn-info btn-sm" @click="toggleAllSteps()">
+                    <span x-text="allStepsOpen ? '&#x1F4D5; Tout fermer' : '&#x1F4D6; Tout ouvrir'"></span>
+                </button>
+            </div>
+            <div x-ref="stepsContainer">
+                <template x-for="(step, stepIndex) in project.elements.steps" :key="step.id">
+                    <div class="step-wrapper" :data-step-id="step.id">
+                        <div class="step-drag-zone"><span class="drag-handle">&#x22EE;&#x22EE;</span></div>
+                        <details class="step-editor" :data-category="step.category">
+                            <summary class="step-summary">
+                                <span class="step-number-badge" x-text="stepIndex + 1"></span>
+                                <input type="text" class="step-icon-input" x-model="step.icon"
+                                    @click="openEmojiSelector('step', stepIndex)" readonly style="cursor:pointer;">
+                                <input type="text" style="flex:1;" x-model="step.title" @click.stop>
+                                <span class="collapse-icon">&#x25BC;</span>
+                            </summary>
+                            <div class="step-content">
+                                <div class="form-group">
+                                    <label>Categorie</label>
+                                    <select x-model="step.category">
+                                        <option value="immediate">&#x1F6A8; Immediat (Rouge)</option>
+                                        <option value="management">&#x1F465; Gestion (Bleu)</option>
+                                        <option value="communication">&#x1F4E2; Communication (Orange)</option>
+                                        <option value="continuity">&#x2705; Continuite (Vert)</option>
+                                    </select>
+                                </div>
+
+                                <!-- Step colors -->
+                                <div class="form-group">
+                                    <label>&#x1F3A8; Couleurs personnalisees</label>
+                                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;">
+                                        <div>
+                                            <label style="font-size:10px;color:#6c757d;margin-bottom:4px;display:block;">Bordure</label>
+                                            <div class="color-picker-btn" style="width:100%;height:35px;"
+                                                :style="`background-color:${getStepColor(step,'border')}`"
+                                                @click="openStepColorPicker(stepIndex,'border')"></div>
+                                        </div>
+                                        <div>
+                                            <label style="font-size:10px;color:#6c757d;margin-bottom:4px;display:block;">Fond</label>
+                                            <div class="color-picker-btn" style="width:100%;height:35px;"
+                                                :style="`background-color:${getStepColor(step,'background')}`"
+                                                @click="openStepColorPicker(stepIndex,'background')"></div>
+                                        </div>
+                                        <div>
+                                            <label style="font-size:10px;color:#6c757d;margin-bottom:4px;display:block;">Texte</label>
+                                            <div class="color-picker-btn" style="width:100%;height:35px;"
+                                                :style="`background-color:${getStepColor(step,'text')}`"
+                                                @click="openStepColorPicker(stepIndex,'text')"></div>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-sm btn-danger w-100" style="margin-top:8px;"
+                                        @click="resetStepColors(stepIndex)"
+                                        x-show="hasCustomStepColors(step)">&#x1F504; Reset couleurs</button>
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="form-group">
+                                    <label>Actions</label>
+                                    <div x-init="$nextTick(() => initActionSortable($el, stepIndex))">
+                                    <template x-for="(action, actionIndex) in step.actions" :key="action.id">
+                                        <div class="action-drag-wrapper action-wrapper" :data-action-id="action.id">
+                                            <span class="action-drag-handle" title="Deplacer">&#x22EE;</span>
+                                            <div class="action-item-editor">
+                                            <div style="display:flex;gap:8px;margin-bottom:8px;">
+                                                <select x-model="action.type" style="min-width:110px;">
+                                                    <option value="critical">&#x1F534; Critique</option>
+                                                    <option value="important">&#x1F7E0; Important</option>
+                                                    <option value="info">&#x1F535; Info</option>
+                                                    <option value="success">&#x1F7E2; Succes</option>
+                                                </select>
+                                                <button class="btn btn-danger btn-sm" @click="removeAction(stepIndex, actionIndex)">&#x1F5D1;&#xFE0F;</button>
+                                            </div>
+                                            <div class="textarea-wrapper">
+                                                <textarea x-model="action.text" style="min-height:55px;border-radius:6px 6px 0 0;"
+                                                    :id="`action-textarea-${stepIndex}-${actionIndex}`"></textarea>
+                                                <div class="text-toolbar-inline">
+                                                    <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTag($event,stepIndex,actionIndex,'&lt;strong&gt;','&lt;/strong&gt;')" title="Gras"><strong>B</strong></button>
+                                                    <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTag($event,stepIndex,actionIndex,'&lt;em&gt;','&lt;/em&gt;')" title="Italique"><em>I</em></button>
+                                                    <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTag($event,stepIndex,actionIndex,'&lt;u&gt;','&lt;/u&gt;')" title="Souligne"><u>U</u></button>
+                                                    <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTag($event,stepIndex,actionIndex,'&lt;s&gt;','&lt;/s&gt;')" title="Barre"><s>S</s></button>
+                                                    <div class="text-toolbar-separator"></div>
+                                                    <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTag($event,stepIndex,actionIndex,'&lt;div style=&quot;text-align:left&quot;&gt;','&lt;/div&gt;')" title="Gauche">&#x2B05;</button>
+                                                    <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTag($event,stepIndex,actionIndex,'&lt;div style=&quot;text-align:center&quot;&gt;','&lt;/div&gt;')" title="Centre">&#x2B06;</button>
+                                                    <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTag($event,stepIndex,actionIndex,'&lt;div style=&quot;text-align:right&quot;&gt;','&lt;/div&gt;')" title="Droite">&#x27A1;</button>
+                                                    <div class="text-toolbar-separator"></div>
+                                                    <button type="button" class="text-toolbar-btn" @mousedown.prevent="pickAndInsertColor($event,stepIndex,actionIndex)" title="Couleur du texte" style="color:#dc3545;"><strong>A</strong></button>
+                                                    <div class="text-toolbar-separator"></div>
+                                                    <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTag($event,stepIndex,actionIndex,'&lt;br&gt;','')" title="Saut de ligne">&#x21B5;</button>
+                                                    <button type="button" class="text-toolbar-btn" @mousedown.prevent="insertTag($event,stepIndex,actionIndex,'&#x2022; ','')" title="Puce">&#x2022;</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        </div>
+                                    </template>
+                                    </div>
+                                    <button class="btn btn-primary w-100 mt-15" @click="addAction(stepIndex)">&#x2795; Ajouter action</button>
+                                </div>
+
+                                <div style="display:flex;gap:8px;margin-top:15px;">
+                                    <button class="btn btn-success btn-sm" @click="duplicateStep(stepIndex)">&#x1F4CB; Dupliquer</button>
+                                    <button class="btn btn-danger btn-sm" @click="removeStep(stepIndex)">&#x1F5D1;&#xFE0F; Supprimer</button>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                </template>
+            </div>
+            <button class="btn btn-success w-100 mt-15" @click="addStep()">&#x2795; Ajouter une etape</button>
+            </div><!-- /section-body steps -->
+
+        </div>
+    </div>
+
+    <!-- PREVIEW PANEL -->
+    <div class="preview-panel" :style="`background:${project.theme.colors.background}`" :data-orientation="previewOrientation">
+        <div class="text-center mb-15" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+            <h3 style="color:var(--primary);margin:0;">&#x1F441;&#xFE0F; Apercu en temps reel</h3>
+            <div class="orientation-toggle" title="Apercu : orientation du document exporte">
+                <button :class="{active: previewOrientation === 'portrait'}" @click="previewOrientation = 'portrait'">&#x1F4C4; Portrait</button>
+                <button :class="{active: previewOrientation === 'landscape'}" @click="previewOrientation = 'landscape'">&#x1F5BC;&#xFE0F; Paysage</button>
+            </div>
+        </div>
+        <div id="preview-container" class="preview-container"
+             :style="`background:${project.theme.colors.contentBg};font-size:${project.theme.fontSize || 100}%;${project.theme.fontFamily && project.theme.fontFamily !== 'system' ? 'font-family:' + project.theme.fontFamily : ''};--preview-cols:${previewLandscapeCols}`">
+            <!-- Header -->
+            <div class="preview-header" :class="{'hide-icon': !project.content.showHeaderIcon}"
+                :style="`background:linear-gradient(135deg,${project.theme.colors.header},${adjustBrightness(project.theme.colors.header,-20)})`">
+                <template x-for="logo in project.elements.logos.filter(l=>l.position&&l.position.startsWith('top'))" :key="logo.id">
+                    <img :src="logo.file||logo.url" :class="`logo ${logo.position}`" :style="`max-width:${logo.size}px`" alt="Logo">
+                </template>
+                <h1 x-html="formatText(project.content.title)"></h1>
+                <p x-html="formatText(project.content.subtitle)"></p>
+            </div>
+            <!-- Timeline -->
+            <div class="preview-timeline">
+                <template x-for="item in project.elements.timeline" :key="item.id">
+                    <div class="preview-timeline-item"
+                        :style="item.type==='item' ? `background:linear-gradient(135deg,${project.theme.colors.timeline},${adjustBrightness(project.theme.colors.timeline,-15)})` : `background:transparent;color:${project.theme.colors.timeline};font-size:1.2em;`"
+                        x-text="item.text"></div>
+                </template>
+            </div>
+            <!-- Steps Grid -->
+            <template x-if="project.elements.steps.length === 0">
+                <div class="preview-empty-state">
+                    <span>&#x1F4CB;</span>
+                    Ajoutez des etapes dans l'editeur pour construire votre infographie
+                </div>
+            </template>
+            <div class="preview-steps-grid" x-show="project.elements.steps.length > 0" :style="`background:${project.theme.colors.contentBg}`">
+                <template x-for="(step, si) in project.elements.steps" :key="step.id">
+                    <div class="preview-step" :style="`border-left-color:${getStepColor(step,'border')};background:${getStepColor(step,'background')};color:${getStepColor(step,'text')};`">
+                        <div class="preview-step-number" :style="`background:linear-gradient(135deg,${project.theme.colors.stepNumber},${adjustBrightness(project.theme.colors.stepNumber,-20)})`" x-text="si + 1"></div>
+                        <div class="preview-step-icon" x-text="step.icon"></div>
+                        <h3 x-text="step.title" :style="`color:${getStepColor(step,'text')};`"></h3>
+                        <div>
+                            <template x-for="action in step.actions" :key="action.id">
+                                <div class="preview-action-item"
+                                    :style="`border-left-color:${actionColor(action.type,'border')};background:${actionColor(action.type,'bg')};color:#2c3e50;`"
+                                    x-html="formatText(action.text)"></div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <!-- Emergency -->
+            <div class="preview-emergency-contact"
+                :style="`background:linear-gradient(135deg,${project.theme.colors.emergency},${adjustBrightness(project.theme.colors.emergency,-20)})`"
+                x-html="formatText(project.content.emergencyMessage)"></div>
+            <!-- Footer -->
+            <div class="preview-footer" :style="`background:linear-gradient(135deg,${project.theme.colors.footer},${adjustBrightness(project.theme.colors.footer,-15)})`">
+                <template x-for="logo in project.elements.logos.filter(l=>l.position&&l.position.startsWith('bottom'))" :key="logo.id">
+                    <img :src="logo.file||logo.url" :class="`logo ${logo.position}`" :style="`max-width:${logo.size}px`" alt="Logo">
+                </template>
+                <div x-html="formatText(project.content.footerMessage)"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EXPORT MODAL -->
+    <div x-show="showExportModal" @click.self="showExportModal=false" class="modal-overlay" x-transition>
+        <div class="modal-content">
+            <h3 style="margin-bottom:20px;text-align:center;">&#x1F4E5; Export</h3>
+
+            <div style="display:grid;gap:15px;">
+                <!-- Browser status -->
+                <div x-show="!browserAvailable" style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px;text-align:center;font-size:13px;">
+                    &#x26A0;&#xFE0F; Aucun navigateur Chromium detecte. Export PNG/PDF non disponible.
+                </div>
+
+                <!-- SHARED: Format + Orientation (for PDF and PNG) -->
+                <div x-show="browserAvailable" style="border:2px solid #6c757d;border-radius:10px;padding:15px;">
+                    <h4 style="color:#6c757d;margin-bottom:10px;">&#x2699;&#xFE0F; Format de sortie</h4>
+
+                    <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">Format papier</label>
+                    <div style="display:flex;gap:8px;margin-bottom:10px;">
+                        <template x-for="fmt in ['A4','A3','A2']" :key="fmt">
+                            <label style="flex:1;cursor:pointer;padding:8px;border:2px solid #dee2e6;border-radius:6px;text-align:center;transition:all 0.2s;"
+                                :style="exportFormat===fmt ? 'border-color:var(--primary);background:#e3f2fd;' : ''">
+                                <input type="radio" x-model="exportFormat" :value="fmt" style="margin-right:4px;">
+                                <span x-text="fmt"></span>
+                            </label>
+                        </template>
+                    </div>
+
+                    <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">Orientation</label>
+                    <div style="display:flex;gap:8px;">
+                        <label style="flex:1;cursor:pointer;padding:8px;border:2px solid #dee2e6;border-radius:6px;text-align:center;transition:all 0.2s;"
+                            :style="exportOrientation==='portrait' ? 'border-color:var(--primary);background:#e3f2fd;' : ''">
+                            <input type="radio" x-model="exportOrientation" value="portrait" style="margin-right:4px;"> &#x1F4C4; Portrait
+                        </label>
+                        <label style="flex:1;cursor:pointer;padding:8px;border:2px solid #dee2e6;border-radius:6px;text-align:center;transition:all 0.2s;"
+                            :style="exportOrientation==='landscape' ? 'border-color:var(--primary);background:#e3f2fd;' : ''">
+                            <input type="radio" x-model="exportOrientation" value="landscape" style="margin-right:4px;"> &#x1F5BC;&#xFE0F; Paysage
+                        </label>
+                    </div>
+                </div>
+
+                <!-- HTML -->
+                <div style="border:2px solid var(--success);border-radius:10px;padding:15px;">
+                    <h4 style="color:var(--success);margin-bottom:10px;">&#x1F310; HTML autonome</h4>
+                    <button class="btn btn-success w-100" @click="exportHTML()">Exporter HTML</button>
+                </div>
+
+                <!-- PDF -->
+                <div style="border:2px solid var(--primary);border-radius:10px;padding:15px;" x-show="browserAvailable">
+                    <h4 style="color:var(--primary);margin-bottom:10px;">&#x1F4C4; PDF (1 page)</h4>
+                    <p style="font-size:11px;color:#6c757d;margin-bottom:10px;">L'infographie sera ajustee pour tenir sur une seule page au format choisi.</p>
+                    <button class="btn btn-primary w-100" @click="exportPDF()">Generer PDF</button>
+                </div>
+
+                <!-- PNG -->
+                <div style="border:2px solid var(--info);border-radius:10px;padding:15px;" x-show="browserAvailable">
+                    <h4 style="color:var(--info);margin-bottom:10px;">&#x1F5BC;&#xFE0F; Image PNG</h4>
+                    <div style="display:flex;gap:8px;margin-bottom:10px;">
+                        <template x-for="d in [150, 300]" :key="d">
+                            <label style="flex:1;cursor:pointer;padding:8px;border:2px solid #dee2e6;border-radius:6px;text-align:center;transition:all 0.2s;"
+                                :style="exportDPI===d ? 'border-color:var(--info);background:#e0f7fa;' : ''">
+                                <input type="radio" x-model.number="exportDPI" :value="d" style="margin-right:4px;">
+                                <span x-text="d + ' DPI'"></span>
+                            </label>
+                        </template>
+                    </div>
+                    <button class="btn btn-info w-100" @click="exportPNG()">Generer PNG</button>
+                </div>
+            </div>
+
+            <button class="btn btn-danger mt-15 w-100" @click="showExportModal=false">Fermer</button>
+        </div>
+    </div>
+
+    <!-- HELP MODAL -->
+    <div x-show="showHelpModal" @click.self="showHelpModal = false" class="modal-overlay" x-transition>
+        <div class="modal-content" style="max-width: 780px;">
+            <h3 style="margin-bottom:15px;text-align:center;">&#x2753; Aide</h3>
+            <div style="max-height:70vh;overflow-y:auto;padding:0 5px;">
+
+                <h4 style="color:var(--primary);margin-top:15px;border-bottom:2px solid #e9ecef;padding-bottom:5px;">&#x1F680; Demarrer rapidement</h4>
+                <ul style="margin:10px 0 15px 20px;line-height:1.8;font-size:14px;">
+                    <li>Cliquez <strong>&#x1F4DA; Modeles</strong> pour partir d'un modele pre-rempli (cyberattaque, incendie, phishing, etc.)</li>
+                    <li>Modifiez le <strong>titre</strong>, le <strong>sous-titre</strong> et les <strong>etapes</strong> selon votre besoin</li>
+                    <li>Cliquez <strong>&#x1F4E5; Export</strong> pour generer un PDF, PNG ou HTML autonome</li>
+                </ul>
+
+                <h4 style="color:var(--primary);margin-top:15px;border-bottom:2px solid #e9ecef;padding-bottom:5px;">&#x270F;&#xFE0F; Mise en forme du texte</h4>
+                <p style="font-size:14px;line-height:1.6;margin-bottom:8px;">Les boutons de la barre d'outils sous chaque zone de texte permettent de mettre en forme le contenu selectionne :</p>
+                <ul style="margin:10px 0 15px 20px;line-height:1.8;font-size:14px;">
+                    <li><strong>B</strong> = gras, <em>I</em> = italique, <u>U</u> = souligne, <s>S</s> = barre</li>
+                    <li><strong>&#x2B05; &#x2B06; &#x27A1;</strong> = alignement du texte (gauche/centre/droite)</li>
+                    <li><strong style="color:#dc3545;">A</strong> = couleur du texte (ouvre le selecteur de couleur)</li>
+                    <li><strong>&#x21B5;</strong> = saut de ligne, <strong>&#x2022;</strong> = puce</li>
+                </ul>
+
+                <h4 style="color:var(--primary);margin-top:15px;border-bottom:2px solid #e9ecef;padding-bottom:5px;">&#x1F5C4;&#xFE0F; Case a cocher (listes)</h4>
+                <p style="font-size:14px;line-height:1.6;">Pour ajouter une case a cocher dans le texte d'une action (utile pour les checklists sur l'export HTML) :</p>
+                <pre style="background:#f1f3f5;padding:10px;border-radius:6px;font-size:12px;margin:8px 0 15px 0;overflow-x:auto;">&lt;label&gt;&lt;input type="checkbox"&gt; Verifier les sauvegardes&lt;/label&gt;</pre>
+
+                <h4 style="color:var(--primary);margin-top:15px;border-bottom:2px solid #e9ecef;padding-bottom:5px;">&#x1F3A8; Apparence</h4>
+                <ul style="margin:10px 0 15px 20px;line-height:1.8;font-size:14px;">
+                    <li>Section <strong>Couleurs et themes</strong> : appliquer un theme pre-defini ou personnaliser chaque couleur</li>
+                    <li>Toolbar <strong>Police</strong> : choisir une police globale pour le document</li>
+                    <li>Toolbar <strong>A- / A+</strong> : ajuster la taille globale de la police (50% a 200%)</li>
+                    <li>Chaque etape peut avoir une <strong>couleur de categorie</strong> (bordure gauche rouge/bleu/orange/vert)</li>
+                </ul>
+
+                <h4 style="color:var(--primary);margin-top:15px;border-bottom:2px solid #e9ecef;padding-bottom:5px;">&#x2328;&#xFE0F; Raccourcis clavier</h4>
+                <ul style="margin:10px 0 15px 20px;line-height:1.8;font-size:14px;">
+                    <li><kbd style="background:#e9ecef;padding:2px 6px;border-radius:3px;">Ctrl+S</kbd> : sauvegarder</li>
+                    <li><kbd style="background:#e9ecef;padding:2px 6px;border-radius:3px;">Ctrl+Z</kbd> : annuler</li>
+                    <li><kbd style="background:#e9ecef;padding:2px 6px;border-radius:3px;">Ctrl+Y</kbd> ou <kbd style="background:#e9ecef;padding:2px 6px;border-radius:3px;">Ctrl+Shift+Z</kbd> : retablir</li>
+                </ul>
+
+                <h4 style="color:var(--primary);margin-top:15px;border-bottom:2px solid #e9ecef;padding-bottom:5px;">&#x1F504; Reorganiser</h4>
+                <ul style="margin:10px 0 15px 20px;line-height:1.8;font-size:14px;">
+                    <li>Pour <strong>reorganiser les etapes</strong> : glisser-deposer via la poignee <strong>&#x22EE;&#x22EE;</strong> a gauche</li>
+                    <li>Pour <strong>reorganiser les actions</strong> d'une etape : glisser-deposer via la poignee <strong>&#x22EE;</strong> a gauche de chaque action</li>
+                    <li>Les numeros d'etapes se mettent a jour automatiquement</li>
+                </ul>
+
+                <h4 style="color:var(--primary);margin-top:15px;border-bottom:2px solid #e9ecef;padding-bottom:5px;">&#x1F4BE; Sauvegarde</h4>
+                <ul style="margin:10px 0 15px 20px;line-height:1.8;font-size:14px;">
+                    <li><strong>Sauvegarde automatique</strong> toutes les 800 ms apres chaque modification</li>
+                    <li>L'indicateur dans la barre d'outils affiche l'etat : Sauvegarde &#x2713; / en cours / non sauvegarde</li>
+                    <li>Une derniere sauvegarde est tentee lors de la fermeture du navigateur</li>
+                </ul>
+
+                <h4 style="color:var(--primary);margin-top:15px;border-bottom:2px solid #e9ecef;padding-bottom:5px;">&#x1F4E5; Export</h4>
+                <ul style="margin:10px 0 15px 20px;line-height:1.8;font-size:14px;">
+                    <li><strong>HTML autonome</strong> : fichier unique avec toutes les donnees, lisible dans n'importe quel navigateur</li>
+                    <li><strong>PDF</strong> : choisir format (A4/A3/A2) et orientation (portrait/paysage), 1 page garantie</li>
+                    <li><strong>PNG</strong> : image haute resolution (150 ou 300 DPI) pour impression ou insertion dans un document</li>
+                </ul>
+
+            </div>
+            <button class="btn btn-danger mt-15 w-100" @click="showHelpModal = false">Fermer</button>
+        </div>
+    </div>
+
+    <!-- TEMPLATE LIBRARY -->
+    <div x-show="showTemplateLibrary" @click.self="showTemplateLibrary = false" class="modal-overlay" x-transition>
+        <div class="modal-content" style="max-width: 800px;">
+            <h3 style="margin-bottom:8px;text-align:center;">&#x1F4DA; Bibliotheque de modeles</h3>
+            <p style="text-align:center;color:#6c757d;font-size:13px;margin-bottom:15px;">
+                Choisissez un modele pour demarrer rapidement. Le modele remplacera le projet en cours.
+            </p>
+            <div class="template-grid">
+                <template x-for="tpl in templateCatalog" :key="tpl.key">
+                    <div class="template-card" @click="loadTemplate(tpl.key)">
+                        <div class="template-card-icon" :style="`background:${tpl.color}`" x-text="tpl.icon"></div>
+                        <div class="template-card-title" x-text="tpl.label"></div>
+                        <div class="template-card-desc" x-text="tpl.description"></div>
+                    </div>
+                </template>
+            </div>
+            <button class="btn btn-danger w-100 mt-15" @click="showTemplateLibrary = false">Fermer</button>
+        </div>
+    </div>
+
+    <!-- EMOJI SELECTOR -->
+    <template x-if="showEmojiSelector">
+        <div class="modal-overlay" @click.self="closeEmojiSelector()">
+            <div class="modal-content">
+                <h3 style="margin-bottom:12px;text-align:center;">Choisir un emoji</h3>
+                <div class="emoji-grid">
+                    <template x-for="(emoji, i) in availableEmojis" :key="i">
+                        <div class="emoji-option" @click="selectEmoji(emoji)" x-text="emoji"></div>
+                    </template>
+                </div>
+                <button class="btn btn-danger w-100 mt-15" @click="closeEmojiSelector()">Fermer</button>
+            </div>
+        </div>
+    </template>
+
+    <!-- EXPORT PROGRESS -->
+    <div x-show="exporting" class="export-progress">
+        <div class="spinner"></div>
+        <p x-text="exportMessage"></p>
+    </div>
+
+</div>
+
+<!-- SCRIPTS (from vendor/ - downloaded by build.ps1) -->
+<script defer src="/vendor/alpine.min.js"></script>
+<script src="/vendor/pickr.min.js"></script>
+<script src="/vendor/Sortable.min.js"></script>
+
+<script>
+// ============================================
+// NOTIFICATION MANAGER
+// ============================================
+const NotificationManager = {
+    current: null,
+    _esc(s) {
+        const d = document.createElement('div');
+        d.textContent = String(s == null ? '' : s);
+        return d.innerHTML;
+    },
+    show(message, type = 'success', duration = 2500) {
+        this.clear();
+        const n = document.createElement('div');
+        n.className = `custom-notification ${type}`;
+        const icon = type === 'success' ? '\u2713' : type === 'error' ? '\u2717' : '\u2139';
+        n.innerHTML = `<div style="font-size:20px;flex-shrink:0;">${icon}</div><div style="flex:1;">${this._esc(message)}</div>`;
+        document.body.appendChild(n);
+        this.current = n;
+        setTimeout(() => { if (this.current === n) this.clear(); }, duration);
+    },
+    clear() { if (this.current) { this.current.remove(); this.current = null; } },
+    success(m) { this.show(m, 'success'); },
+    error(m) { this.show(m, 'error'); },
+    info(m) { this.show(m, 'info', 3000); }
+};
+
+// ============================================
+// COLOR MANAGER
+// ============================================
+const ColorManager = {
+    categoryPresets: {
+        immediate: { border: '#e74c3c', background: '#ffffff', text: '#2c3e50', actionBg: 'rgba(231,76,60,0.05)' },
+        management: { border: '#0056b3', background: '#ffffff', text: '#2c3e50', actionBg: 'rgba(0,86,179,0.05)' },
+        communication: { border: '#f39c12', background: '#ffffff', text: '#2c3e50', actionBg: 'rgba(243,156,18,0.05)' },
+        continuity: { border: '#27ae60', background: '#ffffff', text: '#2c3e50', actionBg: 'rgba(39,174,96,0.05)' }
+    },
+    actionTypePresets: {
+        critical: { border: '#e74c3c', background: 'rgba(231,76,60,0.08)', text: '#2c3e50' },
+        important: { border: '#f39c12', background: 'rgba(243,156,18,0.08)', text: '#2c3e50' },
+        info: { border: '#3498db', background: 'rgba(52,152,219,0.08)', text: '#2c3e50' },
+        success: { border: '#27ae60', background: 'rgba(39,174,96,0.08)', text: '#2c3e50' }
+    },
+    getColor(el, colorType, ctx = {}) {
+        if (el.customColors?.[colorType]) return el.customColors[colorType];
+        if (el.category) { const p = this.categoryPresets[el.category]; if (p?.[colorType]) return p[colorType]; }
+        if (el.type && ctx.parentStep) {
+            if (colorType === 'background' && ctx.parentStep.customColors?.actionBg) return ctx.parentStep.customColors.actionBg;
+            const p = this.actionTypePresets[el.type]; if (p?.[colorType]) return p[colorType];
+        }
+        return { border: '#3498db', background: '#ffffff', text: '#2c3e50', actionBg: 'rgba(52,152,219,0.05)' }[colorType] || '#ffffff';
+    },
+    adjustBrightness(hex, amount) {
+        if (!hex || hex[0] !== '#' || hex.length !== 7) return hex || '#000000';
+        const num = parseInt(hex.slice(1), 16);
+        let r = Math.min(255, Math.max(0, (num >> 16) + amount));
+        let g = Math.min(255, Math.max(0, ((num >> 8) & 0xFF) + amount));
+        let b = Math.min(255, Math.max(0, (num & 0xFF) + amount));
+        return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+    }
+};
+
+// ============================================
+// PICKR MANAGER
+// ============================================
+const PickrManager = {
+    instances: {},
+    open(key, currentColor, onSave, options = {}) {
+        this.close(key);
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const pickr = Pickr.create({
+            el: container, theme: 'nano', default: currentColor || '#000000',
+            comparison: false, defaultRepresentation: 'HEXA',
+            components: { preview: true, opacity: false, hue: true, interaction: { hex: true, input: true, save: true } }
+        });
+        pickr.on('save', color => { if (color) onSave(color.toHEXA().toString()); this.close(key); });
+        pickr.on('hide', () => this.close(key));
+        this.instances[key] = { pickr, container };
+        pickr.show();
+    },
+    close(key) {
+        const inst = this.instances[key];
+        if (!inst) return;
+        try { inst.pickr.destroyAndRemove(); inst.container.remove(); } catch(e) {}
+        delete this.instances[key];
+    }
+};
+
+// ============================================
+// ALPINE APP
+// ============================================
+function infographicApp() {
+    // ============================================
+    // DEFAULT PROJECT TEMPLATE (4 steps like v1.6)
+    // ============================================
+    function getDefaultProject() {
+        return getTemplateProject('cyberattack');
+    }
+
+    // ==========================================================================
+    // TEMPLATE LIBRARY
+    // Factory that creates a fresh project from a template descriptor.
+    // Each template is a pure function returning a project tree with fresh IDs.
+    // ==========================================================================
+    function getTemplateProject(key) {
+        let _id = 1;
+        const nid = () => _id++;
+
+        // Helpers to keep templates compact
+        const step = (icon, title, cat, actions) => ({
+            id: nid(), number: 0, icon, title, category: cat,
+            customColors: { border: null, background: null, text: null, actionBg: null },
+            actions: actions.map(a => ({ id: nid(), type: a[0], text: a[1], customColors: null }))
+        });
+        const tl = (items) => {
+            const out = [];
+            items.forEach((t, i) => {
+                if (i > 0) out.push({ id: nid(), text: '\u27A1\uFE0F', type: 'separator' });
+                out.push({ id: nid(), text: t, type: 'item' });
+            });
+            return out;
+        };
+        const project = (meta, content, theme, elements) => ({
+            _version: '4.0',
+            metadata: Object.assign({ name: 'Nouveau Projet', author: '', organization: '', license: 'AGPL-3.0 / Commercial' }, meta),
+            content,
+            theme: { colors: theme, fontSize: 100, fontFamily: 'system' },
+            elements: Object.assign({ logos: [], timeline: [], steps: [] }, elements)
+        });
+
+        const templates = {
+            // ------------------------------------------------------------------
+            cyberattack: () => project(
+                { name: 'Cyberattaque' },
+                {
+                    title: 'CYBERATTAQUE DETECTEE',
+                    subtitle: "Procedure d'urgence - Actions immediates a entreprendre",
+                    showHeaderIcon: true,
+                    emergencyMessage: "EN CAS D'URGENCE : Contactez immediatement votre RSSI ou equipe cybersecurite",
+                    footerMessage: "RAPPEL IMPORTANT : Chaque minute compte en cas de cyberattaque\nCette procedure doit etre affichee et connue de tous les collaborateurs"
+                },
+                { header: '#dc3545', timeline: '#3498db', stepNumber: '#0056b3', footer: '#2c3e50', emergency: '#ff6b6b', background: '#f8f9fa', contentBg: '#ffffff' },
+                {
+                    timeline: tl(['Detection', 'Alerte', 'Reaction', 'Reprise']),
+                    steps: [
+                        step('\uD83D\uDEE1\uFE0F', 'REFLEXES IMMEDIATS', 'immediate', [
+                            ['critical', '<strong>NE PAS ETEINDRE</strong> les ordinateurs (preuves numeriques)'],
+                            ['critical', '<strong>Deconnecter du reseau</strong> (cable ET Wi-Fi) les postes suspects'],
+                            ['important', "Noter l'heure exacte de detection et les symptomes observes"],
+                            ['info', 'Prendre des photos des ecrans si messages suspects']
+                        ]),
+                        step('\uD83D\uDC65', 'ALERTE HIERARCHIE', 'management', [
+                            ['important', '<strong>Responsable de service :</strong><br>Prevenir immediatement tous vos agents'],
+                            ['important', "Remonter l'information a la direction generale"],
+                            ['important', "Contacter l'equipe IT/cybersecurite"],
+                            ['info', 'Activer la cellule de crise si elle existe']
+                        ]),
+                        step('\uD83D\uDCE2', 'MAITRISE COMMUNICATION', 'communication', [
+                            ['critical', '<strong>INTERDICTION ABSOLUE</strong> de communiquer sans aval de la direction'],
+                            ['important', 'Pas de declaration publique, reseaux sociaux, presse'],
+                            ['info', 'Centraliser toute communication via un porte-parole designe'],
+                            ['info', 'Preparer des elements de langage avec la direction']
+                        ]),
+                        step('\uD83D\uDCCB', 'PLAN DE CONTINUITE', 'continuity', [
+                            ['success', '<strong>Activer les fiches reflexes</strong> du Plan de Continuite Metier (PCM)'],
+                            ['success', 'Identifier les processus critiques a maintenir'],
+                            ['success', 'Basculer sur les solutions de secours prevues'],
+                            ['info', 'Documenter toutes les actions entreprises']
+                        ])
+                    ]
+                }
+            ),
+            // ------------------------------------------------------------------
+            ransomware: () => project(
+                { name: 'Rancongiciel (Ransomware)' },
+                {
+                    title: 'ATTAQUE RANSOMWARE',
+                    subtitle: 'Procedure de crise - Chiffrement de donnees detecte',
+                    showHeaderIcon: true,
+                    emergencyMessage: "NE JAMAIS PAYER LA RANCON - Contactez votre RSSI et le CERT national",
+                    footerMessage: "Declaration obligatoire CNIL sous 72h si donnees personnelles\nConservation imperative de toutes les preuves numeriques"
+                },
+                { header: '#c0392b', timeline: '#e67e22', stepNumber: '#8e44ad', footer: '#2c3e50', emergency: '#e74c3c', background: '#fdf2e9', contentBg: '#ffffff' },
+                {
+                    timeline: tl(['Detection', 'Isolation', 'Evaluation', 'Restauration']),
+                    steps: [
+                        step('\uD83D\uDD12', 'ISOLER IMMEDIATEMENT', 'immediate', [
+                            ['critical', '<strong>DECONNECTER</strong> tous les postes infectes du reseau'],
+                            ['critical', 'Isoler les serveurs de sauvegarde (offline si possible)'],
+                            ['critical', 'Couper WAN/VPN pour empecher la propagation'],
+                            ['important', "Ne pas redemarrer ni eteindre les machines (perte d'indices memoire)"]
+                        ]),
+                        step('\uD83D\uDD0D', 'EVALUER L\'ETENDUE', 'management', [
+                            ['important', 'Identifier les machines chiffrees et les partages touches'],
+                            ['important', 'Verifier les sauvegardes (integrite, date de derniere sauvegarde saine)'],
+                            ['info', 'Rechercher la souche (Lockbit, Conti, etc.) via ID Ransomware'],
+                            ['info', 'Noter les demandes de rancon et portefeuilles bitcoin']
+                        ]),
+                        step('\uD83D\uDCDE', 'DECLARER ET ALERTER', 'communication', [
+                            ['critical', '<strong>Porter plainte</strong> (gendarmerie ou police judiciaire)'],
+                            ['critical', 'Signaler a cybermalveillance.gouv.fr et ANSSI'],
+                            ['important', 'CNIL sous 72h si donnees personnelles compromises'],
+                            ['important', 'Prevenir les assurances et partenaires impactes']
+                        ]),
+                        step('\uD83D\uDD04', 'RESTAURATION', 'continuity', [
+                            ['success', 'Reconstruire depuis sauvegardes saines (AD, serveurs, postes)'],
+                            ['success', 'Changer <strong>tous</strong> les mots de passe (AD, apps, services)'],
+                            ['important', 'Scanner tous les postes avant remise en service'],
+                            ['info', 'Retour d\'experience et plan de durcissement']
+                        ])
+                    ]
+                }
+            ),
+            // ------------------------------------------------------------------
+            phishing: () => project(
+                { name: 'Campagne de Phishing' },
+                {
+                    title: 'CAMPAGNE DE PHISHING',
+                    subtitle: 'Emails malveillants detectes - Actions coordonnees',
+                    showHeaderIcon: true,
+                    emergencyMessage: "Si vous avez clique ou saisi des identifiants : prevenir IT IMMEDIATEMENT",
+                    footerMessage: "Signaler tout email suspect sur : signal-spam.fr\nEn cas de doute, ne jamais cliquer - appeler l'emetteur par un canal independant"
+                },
+                { header: '#f39c12', timeline: '#16a085', stepNumber: '#2980b9', footer: '#34495e', emergency: '#e74c3c', background: '#fef9e7', contentBg: '#ffffff' },
+                {
+                    timeline: tl(['Signalement', 'Analyse', 'Blocage', 'Sensibilisation']),
+                    steps: [
+                        step('\u26A0\uFE0F', 'SI VOUS AVEZ CLIQUE', 'immediate', [
+                            ['critical', '<strong>NE PAS saisir</strong> d\'identifiants sur la page ouverte'],
+                            ['critical', 'Deconnecter le poste du reseau immediatement'],
+                            ['critical', 'Appeler le service IT sans fermer les onglets'],
+                            ['important', 'Changer les mots de passe depuis un autre poste']
+                        ]),
+                        step('\uD83D\uDCE7', 'SIGNALER L\'EMAIL', 'management', [
+                            ['important', 'Transferer l\'email en <strong>piece jointe (.eml)</strong> a l\'IT'],
+                            ['important', 'Ne pas transferer par copier-coller (perte des entetes)'],
+                            ['info', 'Prevenir les collegues susceptibles d\'avoir recu le meme email'],
+                            ['info', 'Signaler sur signal-spam.fr et Pharos']
+                        ]),
+                        step('\uD83D\uDEAB', 'BLOCAGE TECHNIQUE', 'communication', [
+                            ['critical', 'Bloquer l\'expediteur et le domaine dans la passerelle email'],
+                            ['important', 'Bloquer les URLs et IPs malveillantes au firewall/proxy'],
+                            ['important', 'Rechercher dans les logs les clics sur les URLs malveillantes'],
+                            ['info', 'Forcer reset MFA des comptes potentiellement compromis']
+                        ]),
+                        step('\uD83D\uDCDA', 'SENSIBILISATION', 'continuity', [
+                            ['success', 'Diffuser une alerte interne avec les indicateurs (expediteur, objet)'],
+                            ['success', 'Rappel des bons reflexes : survol des liens, verification expediteur'],
+                            ['info', 'Campagne de simulation de phishing dans les semaines qui suivent'],
+                            ['info', 'Mise a jour du plan de formation utilisateurs']
+                        ])
+                    ]
+                }
+            ),
+            // ------------------------------------------------------------------
+            databreach: () => project(
+                { name: 'Fuite de donnees' },
+                {
+                    title: 'FUITE DE DONNEES DETECTEE',
+                    subtitle: 'Violation de donnees personnelles - Procedure RGPD',
+                    showHeaderIcon: true,
+                    emergencyMessage: "DECLARATION CNIL OBLIGATOIRE sous 72h - Ne pas attendre pour evaluer",
+                    footerMessage: "Delegue a la Protection des Donnees (DPO) a informer immediatement\nToute communication aux personnes concernees doit etre coordonnee"
+                },
+                { header: '#8e44ad', timeline: '#3498db', stepNumber: '#2c3e50', footer: '#1a1a2e', emergency: '#c0392b', background: '#f4ecf7', contentBg: '#ffffff' },
+                {
+                    timeline: tl(['Detection', 'Qualification', 'Notification', 'Remediation']),
+                    steps: [
+                        step('\uD83D\uDD0D', 'DETECTER ET CONTENIR', 'immediate', [
+                            ['critical', '<strong>Stopper la fuite</strong> (acces compromis, serveur expose, etc.)'],
+                            ['critical', 'Preserver les logs et preuves avant toute action'],
+                            ['important', 'Evaluer le perimetre : volumes, types de donnees, duree'],
+                            ['important', 'Activer la cellule de crise et informer le DPO']
+                        ]),
+                        step('\u2696\uFE0F', 'QUALIFIER L\'INCIDENT', 'management', [
+                            ['important', '<strong>Donnees personnelles ?</strong> Oui/Non (declenche RGPD)'],
+                            ['important', 'Donnees sensibles ? (sante, biometrie, judiciaire)'],
+                            ['important', 'Risque pour les droits/libertes des personnes concernees ?'],
+                            ['info', 'Documenter dans le registre des violations (obligation RGPD)']
+                        ]),
+                        step('\uD83D\uDCDD', 'NOTIFIER', 'communication', [
+                            ['critical', '<strong>CNIL sous 72h</strong> via teleservice (meme si incomplete)'],
+                            ['important', 'Personnes concernees si risque eleve (sans delai injustifie)'],
+                            ['important', 'Assurance cyber, autorites (ANSSI si OIV/OSE)'],
+                            ['info', 'Partenaires contractuels concernes par la fuite']
+                        ]),
+                        step('\uD83D\uDEE0\uFE0F', 'REMEDIATION', 'continuity', [
+                            ['success', 'Corriger la cause racine (patch, config, acces)'],
+                            ['success', 'Audit des comptes et acces, rotation des secrets'],
+                            ['info', 'Renforcer la detection (DLP, SIEM, alertes specifiques)'],
+                            ['info', 'Retour d\'experience avec actions correctives durables']
+                        ])
+                    ]
+                }
+            ),
+            // ------------------------------------------------------------------
+            fire: () => project(
+                { name: 'Incendie - Evacuation' },
+                {
+                    title: 'INCENDIE - EVACUATION',
+                    subtitle: 'Procedure d\'urgence - Protection des personnes',
+                    showHeaderIcon: true,
+                    emergencyMessage: "APPELER LE 18 ou 112 - Evacuer immediatement - Ne jamais prendre l'ascenseur",
+                    footerMessage: "Point de rassemblement : a definir selon le batiment\nN'attendre personne - signaler les manquants aux secours"
+                },
+                { header: '#e74c3c', timeline: '#f39c12', stepNumber: '#c0392b', footer: '#2c3e50', emergency: '#d35400', background: '#fdedec', contentBg: '#ffffff' },
+                {
+                    timeline: tl(['Alerte', 'Evacuation', 'Rassemblement', 'Secours']),
+                    steps: [
+                        step('\uD83D\uDEA8', 'DONNER L\'ALERTE', 'immediate', [
+                            ['critical', '<strong>Declencher l\'alarme</strong> incendie (boitier rouge)'],
+                            ['critical', '<strong>Appeler le 18 ou 112</strong> en precisant : lieu, nature, victimes'],
+                            ['important', 'Prevenir le responsable securite et la direction'],
+                            ['info', 'Si feu naissant et maitrisable : utiliser un extincteur adapte']
+                        ]),
+                        step('\uD83D\uDEAA', 'EVACUER', 'management', [
+                            ['critical', '<strong>NE JAMAIS prendre l\'ascenseur</strong> - utiliser les escaliers'],
+                            ['critical', 'Fermer portes et fenetres en sortant (limiter propagation)'],
+                            ['important', 'Se baisser si fumee, proteger les voies respiratoires'],
+                            ['important', 'Aider les personnes en difficulte (mobilite reduite)']
+                        ]),
+                        step('\uD83D\uDCCD', 'REJOINDRE LE POINT DE RASSEMBLEMENT', 'communication', [
+                            ['important', '<strong>Rester groupe</strong> par service au point convenu'],
+                            ['important', 'Le responsable fait l\'appel et signale les manquants'],
+                            ['critical', 'NE JAMAIS retourner dans le batiment'],
+                            ['info', 'Attendre les consignes des pompiers']
+                        ]),
+                        step('\uD83D\uDE91', 'ACCUEIL DES SECOURS', 'continuity', [
+                            ['success', 'Le guide-file va a la rencontre des pompiers'],
+                            ['success', 'Communiquer plans, clefs, localisation des sinistres'],
+                            ['important', 'Suivre strictement les consignes des secours'],
+                            ['info', 'Ne pas quitter le site sans autorisation']
+                        ])
+                    ]
+                }
+            ),
+            // ------------------------------------------------------------------
+            blackout: () => project(
+                { name: 'Panne SI majeure' },
+                {
+                    title: 'PANNE SI MAJEURE',
+                    subtitle: 'Indisponibilite generalisee - Mode degrade',
+                    showHeaderIcon: true,
+                    emergencyMessage: "Activer immediatement le Plan de Continuite d'Activite (PCA)",
+                    footerMessage: "Basculer sur les procedures papier si necessaire\nCommunication de crise : un porte-parole unique"
+                },
+                { header: '#2c3e50', timeline: '#3498db', stepNumber: '#1abc9c', footer: '#34495e', emergency: '#e67e22', background: '#eaeded', contentBg: '#ffffff' },
+                {
+                    timeline: tl(['Constat', 'Diagnostic', 'Mode degrade', 'Reprise']),
+                    steps: [
+                        step('\u26A0\uFE0F', 'CONSTATER ET ALERTER', 'immediate', [
+                            ['critical', '<strong>Qualifier l\'impact</strong> : perimetre, utilisateurs, applications'],
+                            ['important', 'Alerter l\'astreinte IT et le RSSI'],
+                            ['important', 'Ouvrir le pont de crise (numero unique connu de tous)'],
+                            ['info', 'Verifier s\'il s\'agit d\'un incident cyber (ne pas ecarter)']
+                        ]),
+                        step('\uD83D\uDD27', 'DIAGNOSTIQUER', 'management', [
+                            ['important', 'Infrastructure : electricite, reseau, stockage, virtualisation'],
+                            ['important', 'Services critiques : AD, DNS, messagerie, metier'],
+                            ['info', 'Prestataires impactes ? (cloud, ISP, SaaS)'],
+                            ['info', 'Communiquer un premier ETA (meme large) aux metiers']
+                        ]),
+                        step('\uD83D\uDCCB', 'ACTIVER LE MODE DEGRADE', 'communication', [
+                            ['critical', '<strong>Activer le PCA</strong> : procedures papier, telephones, fax'],
+                            ['important', 'Identifier les activites prioritaires a maintenir'],
+                            ['important', 'Informer clients/partenaires via canal alternatif (SMS, site statique)'],
+                            ['info', 'Designer un porte-parole unique pour la communication']
+                        ]),
+                        step('\u2705', 'REPRISE ET RETEX', 'continuity', [
+                            ['success', 'Remise en service progressive (services critiques d\'abord)'],
+                            ['success', 'Verification integrite donnees, rattrapage des traitements'],
+                            ['important', 'Communication de fin d\'incident a tous les acteurs'],
+                            ['info', 'RETEX sous 10 jours : cause, chronologie, ameliorations']
+                        ])
+                    ]
+                }
+            )
+        };
+
+        const fn = templates[key] || templates.cyberattack;
+        return fn();
+    }
+
+    // Template catalog for the UI picker
+    const TEMPLATE_CATALOG = [
+        { key: 'cyberattack', label: 'Cyberattaque',     description: 'Procedure generale cyberattaque', icon: '\uD83D\uDEE1\uFE0F', color: '#dc3545' },
+        { key: 'ransomware',  label: 'Rancongiciel',     description: 'Attaque par chiffrement',         icon: '\uD83D\uDD12',        color: '#c0392b' },
+        { key: 'phishing',    label: 'Phishing',         description: 'Campagne d\'hameconnage',         icon: '\u26A0\uFE0F',        color: '#f39c12' },
+        { key: 'databreach',  label: 'Fuite de donnees', description: 'Violation RGPD',                  icon: '\uD83D\uDD13',        color: '#8e44ad' },
+        { key: 'fire',        label: 'Incendie',         description: 'Evacuation et secours',           icon: '\uD83D\uDD25',        color: '#e74c3c' },
+        { key: 'blackout',    label: 'Panne SI majeure', description: 'Mode degrade et PCA',             icon: '\u26A1',              color: '#2c3e50' }
+    ];
+
+    return {
+        // Data
+        project: getDefaultProject(),
+        currentProjectId: '',
+        projectList: [],
+        browserAvailable: false,
+
+        // Theme presets
+        themePresets: {
+            cyber: { _label: 'Cyber / Alerte', header: '#dc3545', timeline: '#3498db', stepNumber: '#0056b3', footer: '#2c3e50', emergency: '#ff6b6b', background: '#f8f9fa', contentBg: '#ffffff' },
+            corporate: { _label: 'Corporate', header: '#1a237e', timeline: '#1565c0', stepNumber: '#0d47a1', footer: '#263238', emergency: '#e65100', background: '#eceff1', contentBg: '#ffffff' },
+            anssi: { _label: 'ANSSI / Gouv', header: '#000091', timeline: '#6a6af4', stepNumber: '#000091', footer: '#1b1b35', emergency: '#e1000f', background: '#f5f5fe', contentBg: '#ffffff' },
+            collectivite: { _label: 'Collectivite', header: '#00695c', timeline: '#26a69a', stepNumber: '#00796b', footer: '#37474f', emergency: '#d84315', background: '#e0f2f1', contentBg: '#ffffff' },
+            sombre: { _label: 'Sombre', header: '#b71c1c', timeline: '#e53935', stepNumber: '#c62828', footer: '#1a1a2e', emergency: '#ff1744', background: '#121212', contentBg: '#1e1e2e' }
+        },
+
+        // UI state
+        colorLabels: { header: 'En-tete', timeline: 'Timeline', stepNumber: 'Numeros', footer: 'Pied de page', emergency: 'Urgence', background: 'Fond', contentBg: 'Contenu' },
+        showExportModal: false,
+        showTemplateLibrary: false,
+        showHelpModal: false,
+        showEmojiSelector: false,
+
+        // Preview orientation: UI-only state (not persisted in the project).
+        // Lets the user see what the portrait/landscape export will look like.
+        previewOrientation: 'portrait',
+        // Landscape column count: 1 step → 1 col, 2 → 2, 3+ → 3 cols by default,
+        // beyond 9 steps switch to 4 cols to stay readable.
+        get previewLandscapeCols() {
+            const n = (this.project && this.project.elements && this.project.elements.steps) ? this.project.elements.steps.length : 4;
+            if (n <= 1) return 1;
+            if (n === 2) return 2;
+            if (n <= 9) return 3;
+            return 4;
+        },
+        templateCatalog: TEMPLATE_CATALOG,
+        emojiSelectorTarget: null,
+        emojiSelectorIndex: null,
+        allStepsOpen: false,
+        exporting: false,
+        exportMessage: '',
+        exportFormat: 'A3',
+        exportOrientation: 'portrait',
+        exportDPI: 300,
+        saveTimer: null,
+
+        // Collapsible sections (steps open by default, others closed)
+        sections: {
+            project: false,
+            content: true,
+            colors: false,
+            logos: false,
+            timeline: false,
+            steps: true
+        },
+
+        // Save status
+        saveStatus: 'saved',
+
+        // Undo/Redo
+        undoStack: [],
+        redoStack: [],
+        _undoLock: false,
+        _lastSnapshot: '',
+
+        availableEmojis: [
+            "\uD83D\uDDA5\uFE0F","\uD83D\uDCBB","\uD83D\uDCF1","\u2328\uFE0F","\uD83D\uDDB1\uFE0F","\uD83D\uDDA8\uFE0F","\uD83D\uDCBE","\uD83D\uDCBF","\uD83D\uDD0C","\uD83D\uDCE1",
+            "\uD83D\uDEE1\uFE0F","\uD83D\uDD10","\uD83D\uDD13","\uD83D\uDD12","\uD83D\uDD11","\uD83D\uDDDD\uFE0F","\uD83D\uDEA8","\u26A0\uFE0F","\u26D4","\uD83D\uDEAB","\uD83E\uDDF1","\uD83E\uDDF0","\uD83E\uDDEF",
+            "\uD83D\uDCDE","\u260E\uFE0F","\uD83D\uDCF2","\uD83D\uDCE7","\uD83D\uDCE8","\uD83D\uDCE9","\uD83D\uDCE4","\uD83D\uDCE5","\u2709\uFE0F","\uD83D\uDCE2","\uD83D\uDCAC","\uD83D\uDDE8\uFE0F","\uD83D\uDCE3",
+            "\uD83D\uDC64","\uD83D\uDC65","\uD83D\uDC68\u200D\uD83D\uDCBC","\uD83D\uDC69\u200D\uD83D\uDCBC","\uD83D\uDC68\u200D\uD83D\uDCBB","\uD83D\uDC69\u200D\uD83D\uDCBB","\uD83D\uDD75\uFE0F","\uD83D\uDC6E",
+            "\u2705","\u2714\uFE0F","\u2611\uFE0F","\u274C","\u2B55","\uD83D\uDD01","\uD83D\uDD04","\uD83C\uDD97","\uD83C\uDD98",
+            "\uD83D\uDCC4","\uD83D\uDCCA","\uD83D\uDCC8","\uD83D\uDCC9","\uD83D\uDCCB","\uD83D\uDCCE","\uD83D\uDCCD","\uD83D\uDCCC","\uD83D\uDCD4","\uD83D\uDDD2\uFE0F","\uD83D\uDDC3\uFE0F","\uD83E\uDDFE",
+            "\u23F0","\u23F1\uFE0F","\u23F2\uFE0F","\uD83D\uDCC5","\uD83D\uDCC6","\uD83D\uDDD3\uFE0F",
+            "\u2699\uFE0F","\uD83D\uDEE0\uFE0F","\uD83D\uDD27","\uD83E\uDDE9","\uD83D\uDD0D","\uD83D\uDD0E",
+            "\uD83D\uDE80","\u2708\uFE0F","\uD83D\uDE81","\u27A1\uFE0F","\u2B06\uFE0F","\u2B07\uFE0F","\u2B05\uFE0F","\u2194\uFE0F",
+            "\uD83C\uDFE2","\uD83C\uDFDB\uFE0F","\uD83D\uDCBC","\uD83C\uDFAF","\uD83D\uDCA1",
+            "\uD83E\uDDE0","\uD83E\uDD14","\uD83D\uDCAD","\uD83D\uDD2C","\uD83E\uDDEA",
+            "\uD83D\uDE92","\uD83D\uDE91","\uD83D\uDE93","\uD83D\uDD25","\uD83D\uDCA5","\uD83E\uDDE8",
+            "\uD83C\uDF10","\uD83D\uDCA0","\uD83D\uDD78\uFE0F","\u2601\uFE0F","\uD83D\uDCF6","\uD83D\uDD17"
+        ],
+
+        // ============================================
+        // INIT
+        // ============================================
+        async init() {
+            await this.checkBrowser();
+            await this.refreshProjectList();
+
+            if (Array.isArray(this.projectList) && this.projectList.length > 0) {
+                await this.switchProject(this.projectList[0].id);
+            }
+
+            this.$nextTick(() => { this.initAllSortables(); });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); this.undo(); }
+                if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); this.redo(); }
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); this.saveProject(); }
+            });
+
+            // SAFETY NET: save before window close or tab hide.
+            // Uses sendBeacon (synchronous, survives unload) with a fallback to sync XHR.
+            const saveOnExit = () => {
+                if (!this.currentProjectId) return;
+                if (this.saveStatus === 'saved') return; // nothing to save
+                const blob = new Blob([JSON.stringify(this.project)], { type: 'application/json' });
+                try {
+                    navigator.sendBeacon(`/api/projects/${this.currentProjectId}`, blob);
+                } catch (e) {
+                    // Fallback: synchronous XHR (deprecated but still works on unload)
+                    try {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('PUT', `/api/projects/${this.currentProjectId}`, false);
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+                        xhr.send(JSON.stringify(this.project));
+                    } catch(e2) { /* best effort */ }
+                }
+            };
+            window.addEventListener('beforeunload', (e) => {
+                saveOnExit();
+                if (this.saveStatus !== 'saved') {
+                    // Warn the user (modern browsers show a generic prompt)
+                    e.preventDefault();
+                    e.returnValue = '';
+                }
+            });
+            // Also save when the tab is hidden (mobile, tab switch) — more reliable than beforeunload
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden') saveOnExit();
+            });
+
+            // Take initial snapshot for undo
+            this._lastSnapshot = JSON.stringify(this.project);
+
+            // Watch for changes - debounced autosave + undo snapshots
+            this.$watch('project', () => {
+                if (this._undoLock) return;
+                this.saveStatus = 'unsaved';
+                clearTimeout(this.saveTimer);
+                this.saveTimer = setTimeout(() => {
+                    this.pushUndo();
+                    this.autoSave();
+                }, 800);
+            }, { deep: true });
+
+            NotificationManager.success('Generateur v2.0 pret !');
+        },
+
+        // ============================================
+        // UNDO / REDO
+        // ============================================
+        pushUndo() {
+            const snapshot = JSON.stringify(this.project);
+            if (snapshot === this._lastSnapshot) return; // No actual change
+            this.undoStack.push(this._lastSnapshot);
+            if (this.undoStack.length > 50) this.undoStack.shift(); // Limit stack
+            this._lastSnapshot = snapshot;
+            this.redoStack = []; // Clear redo on new action
+        },
+        undo() {
+            if (this.undoStack.length === 0) return;
+            this.redoStack.push(JSON.stringify(this.project));
+            const prev = this.undoStack.pop();
+            this._undoLock = true;
+            this.project = JSON.parse(prev);
+            this._lastSnapshot = prev;
+            this.$nextTick(() => {
+                this._undoLock = false;
+                this.initAllSortables();
+            });
+        },
+        redo() {
+            if (this.redoStack.length === 0) return;
+            this.undoStack.push(JSON.stringify(this.project));
+            const next = this.redoStack.pop();
+            this._undoLock = true;
+            this.project = JSON.parse(next);
+            this._lastSnapshot = next;
+            this.$nextTick(() => {
+                this._undoLock = false;
+                this.initAllSortables();
+            });
+        },
+
+        // ============================================
+        // SORTABLE INIT
+        // ============================================
+        initAllSortables() {
+            if (typeof Sortable === 'undefined') return;
+            if (this.$refs.stepsContainer) {
+                const existing = Sortable.get(this.$refs.stepsContainer);
+                if (existing) existing.destroy();
+                new Sortable(this.$refs.stepsContainer, {
+                    animation: 150, handle: '.drag-handle', ghostClass: 'sortable-ghost',
+                    onEnd: (evt) => {
+                        if (evt.oldIndex === evt.newIndex) return;
+                        const container = this.$refs.stepsContainer;
+                        const idOrder = Array.from(container.querySelectorAll('[data-step-id]'))
+                            .map(el => Number(el.getAttribute('data-step-id')));
+                        const byId = new Map(this.project.elements.steps.map(s => [s.id, s]));
+                        const reordered = idOrder.map(id => byId.get(id)).filter(Boolean);
+                        if (reordered.length !== this.project.elements.steps.length) return;
+                        this.pushUndo();
+                        // Force Alpine to fully re-render x-for (not just reorder by :key)
+                        // by emptying the array first, then repopulating on next tick.
+                        // This ensures stepIndex-dependent expressions like badges are recomputed.
+                        this.project.elements.steps = [];
+                        this.$nextTick(() => {
+                            this.project.elements.steps = reordered;
+                            this.$nextTick(() => { this.initAllSortables(); });
+                        });
+                    }
+                });
+            }
+        },
+        initActionSortable(el, stepIndex) {
+            if (typeof Sortable === 'undefined' || !el) return;
+            const existing = Sortable.get(el);
+            if (existing) existing.destroy();
+            new Sortable(el, {
+                animation: 150, handle: '.action-drag-handle', ghostClass: 'sortable-ghost',
+                onEnd: (evt) => {
+                    if (evt.oldIndex === evt.newIndex) return;
+                    const idOrder = Array.from(el.querySelectorAll('[data-action-id]'))
+                        .map(n => Number(n.getAttribute('data-action-id')));
+                    const step = this.project.elements.steps[stepIndex];
+                    if (!step) return;
+                    const byId = new Map(step.actions.map(a => [a.id, a]));
+                    const reordered = idOrder.map(id => byId.get(id)).filter(Boolean);
+                    if (reordered.length !== step.actions.length) return;
+                    this.pushUndo();
+                    step.actions = [];
+                    this.$nextTick(() => {
+                        step.actions = reordered;
+                    });
+                }
+            });
+        },
+
+        async checkBrowser() {
+            try {
+                const resp = await fetch('/api/browser/status');
+                const data = await resp.json();
+                this.browserAvailable = data.available;
+            } catch(e) { this.browserAvailable = false; }
+        },
+
+        async refreshProjectList() {
+            try {
+                const resp = await fetch('/api/projects');
+                const data = await resp.json();
+                this.projectList = Array.isArray(data) ? data : [];
+            } catch(e) { this.projectList = []; }
+        },
+
+        async switchProject(id) {
+            if (!id) return;
+            try {
+                const resp = await fetch(`/api/projects/${id}`);
+                if (resp.ok) {
+                    this.project = await resp.json();
+                    this.currentProjectId = id;
+                    this._lastSnapshot = JSON.stringify(this.project);
+                    this.undoStack = [];
+                    this.redoStack = [];
+                    this.saveStatus = 'saved';
+                    this.$nextTick(() => { this.initAllSortables(); });
+                }
+            } catch(e) { NotificationManager.error('Erreur de chargement'); }
+        },
+
+        // ============================================
+        // SAVE / LOAD
+        // ============================================
+        async saveProject() {
+            this.saveStatus = 'saving';
+            try {
+                const method = this.currentProjectId ? 'PUT' : 'POST';
+                const url = this.currentProjectId ? `/api/projects/${this.currentProjectId}` : '/api/projects';
+                const resp = await fetch(url, {
+                    method, headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.project)
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    this.currentProjectId = data.id;
+                    this.saveStatus = 'saved';
+                    await this.refreshProjectList();
+                    NotificationManager.success('Projet sauvegarde');
+                } else {
+                    this.saveStatus = 'unsaved';
+                    NotificationManager.error(data.error || 'Erreur');
+                }
+            } catch(e) {
+                this.saveStatus = 'unsaved';
+                NotificationManager.error('Erreur de sauvegarde');
+            }
+        },
+
+        async autoSave() {
+            this.saveStatus = 'saving';
+            try {
+                if (!this.currentProjectId) {
+                    // First autosave: create the project server-side (POST)
+                    const resp = await fetch('/api/projects', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.project)
+                    });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        this.currentProjectId = data.id;
+                        this.saveStatus = 'saved';
+                        this.refreshProjectList(); // silent
+                    } else {
+                        this.saveStatus = 'unsaved';
+                    }
+                    return;
+                }
+                // Subsequent autosaves: PUT
+                const resp = await fetch(`/api/projects/${this.currentProjectId}`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.project)
+                });
+                this.saveStatus = resp.ok ? 'saved' : 'unsaved';
+            } catch(e) { this.saveStatus = 'unsaved'; }
+        },
+
+        async newProject() {
+            this.currentProjectId = '';
+            this.project = getDefaultProject();
+            this.undoStack = [];
+            this.redoStack = [];
+            this._lastSnapshot = JSON.stringify(this.project);
+            this.saveStatus = 'unsaved';
+            this.$nextTick(() => { this.initAllSortables(); });
+            NotificationManager.info('Nouveau projet cree');
+        },
+
+        loadTemplate(templateKey) {
+            // Validate the template key against the catalog to prevent injection
+            const valid = this.templateCatalog.some(t => t.key === templateKey);
+            if (!valid) {
+                NotificationManager.error('Modele inconnu');
+                return;
+            }
+            if (this.currentProjectId || this._lastSnapshot !== JSON.stringify(this.project)) {
+                if (!confirm('Remplacer le projet en cours par ce modele ? Les modifications non sauvegardees seront perdues.')) return;
+            }
+            this.currentProjectId = '';
+            this.project = getTemplateProject(templateKey);
+            this.undoStack = [];
+            this.redoStack = [];
+            this._lastSnapshot = JSON.stringify(this.project);
+            this.saveStatus = 'unsaved';
+            this.showTemplateLibrary = false;
+            this.$nextTick(() => { this.initAllSortables(); });
+            const tpl = this.templateCatalog.find(t => t.key === templateKey);
+            NotificationManager.success(`Modele "${tpl.label}" charge`);
+        },
+
+        async deleteProject() {
+            if (!this.currentProjectId) return;
+            const name = this.project.metadata.name || this.currentProjectId;
+            if (!confirm(`Supprimer definitivement le projet "${name}" ?`)) return;
+            try {
+                const resp = await fetch(`/api/projects/${this.currentProjectId}`, { method: 'DELETE' });
+                if (resp.ok) {
+                    NotificationManager.success(`Projet "${name}" supprime`);
+                    this.currentProjectId = '';
+                    this.project = getDefaultProject();
+                    this.undoStack = [];
+                    this.redoStack = [];
+                    this._lastSnapshot = JSON.stringify(this.project);
+                    this.saveStatus = 'saved';
+                    await this.refreshProjectList();
+                    // Load first remaining project if any
+                    if (this.projectList.length > 0) {
+                        await this.switchProject(this.projectList[0].id);
+                    }
+                } else {
+                    NotificationManager.error('Erreur lors de la suppression');
+                }
+            } catch(e) { NotificationManager.error('Erreur lors de la suppression'); }
+        },
+
+        async handleImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const resp = await fetch('/api/import', { method: 'POST', body: formData });
+                const data = await resp.json();
+                if (resp.ok) {
+                    this.project = data.project;
+                    this.currentProjectId = data.id;
+                    this.undoStack = [];
+                    this.redoStack = [];
+                    this._lastSnapshot = JSON.stringify(this.project);
+                    this.saveStatus = 'saved';
+                    await this.refreshProjectList();
+                    this.$nextTick(() => { this.initAllSortables(); });
+                    NotificationManager.success(`Projet "${this.project.metadata.name}" importe`);
+                } else {
+                    NotificationManager.error(data.error || 'Erreur import');
+                }
+            } catch(e) { NotificationManager.error("Erreur d'import"); }
+            event.target.value = '';
+        },
+
+        // ============================================
+        // EXPORT (via API)
+        // ============================================
+        async exportHTML() {
+            if (!this.currentProjectId) { await this.saveProject(); }
+            if (!this.currentProjectId) return;
+            this.exporting = true; this.exportMessage = 'Generation HTML...';
+            try {
+                const resp = await fetch('/api/export/html', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectId: this.currentProjectId })
+                });
+                if (resp.ok) {
+                    const blob = await resp.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = resp.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 'infographie.html';
+                    a.click(); URL.revokeObjectURL(url);
+                    this.showExportModal = false;
+                    NotificationManager.success('HTML exporte');
+                } else { NotificationManager.error('Erreur export HTML'); }
+            } catch(e) { NotificationManager.error('Erreur export HTML'); }
+            this.exporting = false;
+        },
+
+        async exportPDF() {
+            if (!this.currentProjectId) { await this.saveProject(); }
+            if (!this.currentProjectId) return;
+            this.exporting = true; this.exportMessage = 'Generation PDF en cours... (peut prendre quelques secondes)';
+            try {
+                const resp = await fetch('/api/export/pdf', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectId: this.currentProjectId, format: this.exportFormat, orientation: this.exportOrientation })
+                });
+                if (resp.ok) {
+                    const blob = await resp.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = resp.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 'infographie.pdf';
+                    a.click(); URL.revokeObjectURL(url);
+                    this.showExportModal = false;
+                    NotificationManager.success('PDF genere avec succes');
+                } else {
+                    const data = await resp.json();
+                    NotificationManager.error(data.error || 'Erreur export PDF');
+                }
+            } catch(e) { NotificationManager.error('Erreur export PDF'); }
+            this.exporting = false;
+        },
+
+        async exportPNG() {
+            if (!this.currentProjectId) { await this.saveProject(); }
+            if (!this.currentProjectId) return;
+            this.exporting = true; this.exportMessage = `Generation PNG ${this.exportDPI} DPI... (peut prendre quelques secondes)`;
+            try {
+                const resp = await fetch('/api/export/png', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectId: this.currentProjectId, format: this.exportFormat, orientation: this.exportOrientation, dpi: this.exportDPI })
+                });
+                if (resp.ok) {
+                    const blob = await resp.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = resp.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 'infographie.png';
+                    a.click(); URL.revokeObjectURL(url);
+                    this.showExportModal = false;
+                    NotificationManager.success('PNG genere avec succes');
+                } else {
+                    const data = await resp.json();
+                    NotificationManager.error(data.error || 'Erreur export PNG');
+                }
+            } catch(e) { NotificationManager.error('Erreur export PNG'); }
+            this.exporting = false;
+        },
+
+        // ============================================
+        // COLORS
+        // ============================================
+        getStepColor(step, type) { return ColorManager.getColor(step, type, { project: this.project }); },
+        getActionColor(action, step, type) { return ColorManager.getColor(action, type, { project: this.project, parentStep: step }); },
+        adjustBrightness(hex, amount) { return ColorManager.adjustBrightness(hex, amount); },
+
+        // Direct reactive color lookup for action types (avoids deep-watch issues)
+        actionColor(actionType, prop) {
+            const presets = {
+                critical:  { border: '#e74c3c', bg: 'rgba(231,76,60,0.08)' },
+                important: { border: '#f39c12', bg: 'rgba(243,156,18,0.08)' },
+                info:      { border: '#3498db', bg: 'rgba(52,152,219,0.08)' },
+                success:   { border: '#27ae60', bg: 'rgba(39,174,96,0.08)' }
+            };
+            return presets[actionType]?.[prop] || (prop === 'border' ? '#3498db' : 'rgba(52,152,219,0.08)');
+        },
+
+        openGlobalColorPicker(key) {
+            PickrManager.open('global-' + key, this.project.theme.colors[key], (color) => {
+                this.project.theme.colors[key] = color;
+            });
+        },
+        openStepColorPicker(stepIndex, type) {
+            const step = this.project.elements.steps[stepIndex];
+            const current = this.getStepColor(step, type);
+            PickrManager.open(`step-${stepIndex}-${type}`, current, (color) => {
+                if (!step.customColors) step.customColors = { border: null, background: null, text: null, actionBg: null };
+                step.customColors[type] = color;
+            });
+        },
+        hasCustomStepColors(step) {
+            if (!step.customColors) return false;
+            return step.customColors.border || step.customColors.background || step.customColors.text;
+        },
+        resetStepColors(stepIndex) {
+            this.project.elements.steps[stepIndex].customColors = { border: null, background: null, text: null, actionBg: null };
+        },
+
+        applyTheme(name) {
+            const theme = this.themePresets[name];
+            if (!theme) return;
+            Object.keys(theme).forEach(key => {
+                if (key !== '_label' && this.project.theme.colors.hasOwnProperty(key)) {
+                    this.project.theme.colors[key] = theme[key];
+                }
+            });
+            NotificationManager.success(`Theme "${theme._label}" applique`);
+        },
+
+        adjustFontSize(delta) {
+            if (!this.project.theme.fontSize) this.project.theme.fontSize = 100;
+            this.project.theme.fontSize = Math.max(50, Math.min(200, this.project.theme.fontSize + delta));
+        },
+
+        // ============================================
+        // STEPS & ACTIONS CRUD
+        // ============================================
+        nextId() { return Date.now() + Math.floor(Math.random() * 1000); },
+
+        addStep() {
+            this.project.elements.steps.push({
+                id: this.nextId(), number: this.project.elements.steps.length + 1,
+                icon: '\uD83D\uDCCB', title: 'Nouvelle etape', category: 'management',
+                customColors: { border: null, background: null, text: null, actionBg: null },
+                actions: []
+            });
+        },
+        removeStep(index) {
+            this.pushUndo();
+            this.project.elements.steps.splice(index, 1);
+            NotificationManager.info('Etape supprimee — Ctrl+Z pour annuler');
+        },
+        removeAction(stepIndex, actionIndex) {
+            this.pushUndo();
+            this.project.elements.steps[stepIndex].actions.splice(actionIndex, 1);
+            NotificationManager.info('Action supprimee — Ctrl+Z pour annuler');
+        },
+        duplicateStep(index) {
+            const copy = JSON.parse(JSON.stringify(this.project.elements.steps[index]));
+            copy.id = this.nextId();
+            copy.title += ' (copie)';
+            copy.actions.forEach(a => a.id = this.nextId());
+            this.project.elements.steps.splice(index + 1, 0, copy);
+        },
+        reorderSteps(oldIdx, newIdx) {
+            // Use a fresh array to force Alpine reactivity + x-for re-evaluation of stepIndex
+            const steps = [...this.project.elements.steps];
+            const [moved] = steps.splice(oldIdx, 1);
+            steps.splice(newIdx, 0, moved);
+            this.project.elements.steps = steps;
+        },
+        addAction(stepIndex) {
+            this.project.elements.steps[stepIndex].actions.push({
+                id: this.nextId(), type: 'info', text: 'Nouvelle action', customColors: null
+            });
+        },
+
+        // ============================================
+        // LOGOS
+        // ============================================
+        addLogo() {
+            this.project.elements.logos.push({ id: this.nextId(), url: '', file: '', position: 'top-right', size: 120 });
+        },
+        removeLogo(index) { this.project.elements.logos.splice(index, 1); },
+        async handleLogoUpload(event, logoIndex) {
+            const file = event.target.files[0];
+            if (!file) return;
+            // If project not saved yet, save first
+            if (!this.currentProjectId) await this.saveProject();
+            if (!this.currentProjectId) {
+                // Fallback: base64
+                const reader = new FileReader();
+                reader.onload = (e) => { this.project.elements.logos[logoIndex].file = e.target.result; };
+                reader.readAsDataURL(file);
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const resp = await fetch(`/api/projects/${this.currentProjectId}/assets`, { method: 'POST', body: formData });
+                const data = await resp.json();
+                if (resp.ok) {
+                    this.project.elements.logos[logoIndex].file = data.url;
+                    NotificationManager.success('Logo uploade');
+                }
+            } catch(e) { NotificationManager.error('Erreur upload logo'); }
+        },
+
+        // ============================================
+        // TIMELINE
+        // ============================================
+        addTimelineItem() {
+            this.project.elements.timeline.push({ id: this.nextId(), text: 'Nouvel element', type: 'item' });
+        },
+
+        // ============================================
+        // EMOJI SELECTOR
+        // ============================================
+        openEmojiSelector(target, index) { this.emojiSelectorTarget = target; this.emojiSelectorIndex = index; this.showEmojiSelector = true; },
+        closeEmojiSelector() { this.showEmojiSelector = false; },
+        selectEmoji(emoji) {
+            if (this.emojiSelectorTarget === 'step') {
+                this.project.elements.steps[this.emojiSelectorIndex].icon = emoji;
+            } else if (this.emojiSelectorTarget === 'timeline') {
+                this.project.elements.timeline[this.emojiSelectorIndex].text = emoji;
+            }
+            this.closeEmojiSelector();
+        },
+
+        // ============================================
+        // TEXT TOOLBAR (inline - always visible)
+        // ============================================
+        insertTag(event, stepIndex, actionIndex, startTag, endTag) {
+            event.preventDefault();
+            const ta = document.getElementById(`action-textarea-${stepIndex}-${actionIndex}`);
+            if (!ta) return;
+            const s = ta.selectionStart, e = ta.selectionEnd;
+            const sel = ta.value.substring(s, e);
+            this.project.elements.steps[stepIndex].actions[actionIndex].text = ta.value.substring(0, s) + startTag + sel + endTag + ta.value.substring(e);
+            this.$nextTick(() => { ta.focus(); ta.setSelectionRange(s + startTag.length + sel.length + endTag.length, s + startTag.length + sel.length + endTag.length); });
+        },
+
+        pickAndInsertColor(event, stepIndex, actionIndex) {
+            event.preventDefault();
+            const ta = document.getElementById(`action-textarea-${stepIndex}-${actionIndex}`);
+            if (!ta) return;
+            const s = ta.selectionStart, e = ta.selectionEnd;
+            // Use native color picker (invisible input) to get a value
+            const picker = document.createElement('input');
+            picker.type = 'color';
+            picker.value = '#dc3545';
+            picker.style.position = 'fixed';
+            picker.style.left = '-9999px';
+            document.body.appendChild(picker);
+            picker.addEventListener('change', () => {
+                // Validate color format (#rrggbb) before injection
+                const color = /^#[0-9a-fA-F]{6}$/.test(picker.value) ? picker.value : '#dc3545';
+                const startTag = `<span style="color:${color}">`;
+                const endTag = '</span>';
+                const sel = ta.value.substring(s, e);
+                this.project.elements.steps[stepIndex].actions[actionIndex].text = ta.value.substring(0, s) + startTag + sel + endTag + ta.value.substring(e);
+                this.$nextTick(() => {
+                    ta.focus();
+                    const pos = s + startTag.length + sel.length + endTag.length;
+                    ta.setSelectionRange(pos, pos);
+                });
+                picker.remove();
+            }, { once: true });
+            picker.addEventListener('cancel', () => picker.remove(), { once: true });
+            picker.click();
+        },
+
+        // Generic helpers: operate on any textarea by DOM id + dot-path in the project
+        _getByPath(path) {
+            return path.split('.').reduce((o, k) => o && o[k], this);
+        },
+        _setByPath(path, value) {
+            const parts = path.split('.');
+            const last = parts.pop();
+            const obj = parts.reduce((o, k) => o[k], this);
+            obj[last] = value;
+        },
+
+        insertTagById(taId, path, startTag, endTag) {
+            const ta = document.getElementById(taId);
+            if (!ta) return;
+            const s = ta.selectionStart, e = ta.selectionEnd;
+            const sel = ta.value.substring(s, e);
+            const newVal = ta.value.substring(0, s) + startTag + sel + endTag + ta.value.substring(e);
+            this._setByPath(path, newVal);
+            this.$nextTick(() => {
+                ta.focus();
+                const pos = s + startTag.length + sel.length + endTag.length;
+                ta.setSelectionRange(pos, pos);
+            });
+        },
+
+        pickColorById(event, taId, path) {
+            event.preventDefault();
+            const ta = document.getElementById(taId);
+            if (!ta) return;
+            const s = ta.selectionStart, e = ta.selectionEnd;
+            const picker = document.createElement('input');
+            picker.type = 'color';
+            picker.value = '#dc3545';
+            picker.style.position = 'fixed';
+            picker.style.left = '-9999px';
+            document.body.appendChild(picker);
+            picker.addEventListener('change', () => {
+                const color = /^#[0-9a-fA-F]{6}$/.test(picker.value) ? picker.value : '#dc3545';
+                const startTag = `<span style="color:${color}">`;
+                const endTag = '</span>';
+                const sel = ta.value.substring(s, e);
+                const newVal = ta.value.substring(0, s) + startTag + sel + endTag + ta.value.substring(e);
+                this._setByPath(path, newVal);
+                this.$nextTick(() => {
+                    ta.focus();
+                    const pos = s + startTag.length + sel.length + endTag.length;
+                    ta.setSelectionRange(pos, pos);
+                });
+                picker.remove();
+            }, { once: true });
+            picker.addEventListener('cancel', () => picker.remove(), { once: true });
+            picker.click();
+        },
+
+        // ============================================
+        // MISC
+        // ============================================
+        toggleAllSteps() {
+            this.allStepsOpen = !this.allStepsOpen;
+            document.querySelectorAll('.step-editor').forEach(d => { d.open = this.allStepsOpen; });
+        },
+        // Sanitize user HTML: whitelist allowed tags and attributes.
+        // Used for any user-supplied rich text rendered via x-html.
+        // Protects against XSS: script tags, event handlers, javascript: URLs.
+        formatText(text) {
+            if (!text) return '';
+            // First convert newlines (if any) to <br>
+            let html = String(text).replace(/\n/g, '<br>');
+            return this._sanitizeHTML(html);
+        },
+
+        _sanitizeHTML(dirtyHTML) {
+            // Parse into a detached DOM (not rendered, no scripts execute)
+            const tmpl = document.createElement('template');
+            tmpl.innerHTML = dirtyHTML;
+            this._sanitizeNode(tmpl.content);
+            return tmpl.innerHTML;
+        },
+
+        _sanitizeNode(node) {
+            // Allowed tags and their allowed attributes
+            const ALLOWED = {
+                'STRONG': [], 'B': [], 'EM': [], 'I': [], 'U': [], 'S': [], 'STRIKE': [],
+                'BR': [], 'P': ['style'], 'DIV': ['style'], 'SPAN': ['style'],
+                'LABEL': [], 'INPUT': ['type', 'checked', 'disabled']
+            };
+            // Allowed inline CSS properties (value-whitelisted below)
+            const ALLOWED_STYLES = ['color', 'text-align', 'font-weight', 'font-style', 'text-decoration'];
+
+            const children = Array.from(node.childNodes);
+            for (const child of children) {
+                if (child.nodeType === 3) continue; // text node: safe
+                if (child.nodeType !== 1) { child.remove(); continue; } // remove comments, etc.
+
+                const tag = child.tagName;
+                if (!ALLOWED[tag]) {
+                    // Unknown/disallowed tag: keep children but drop the tag
+                    while (child.firstChild) child.parentNode.insertBefore(child.firstChild, child);
+                    child.remove();
+                    continue;
+                }
+
+                // INPUT: only type="checkbox" allowed. Any other type → remove entire element.
+                if (tag === 'INPUT') {
+                    const type = (child.getAttribute('type') || '').toLowerCase();
+                    if (type !== 'checkbox') {
+                        child.remove();
+                        continue;
+                    }
+                }
+
+                // Scrub attributes: keep only whitelisted ones, sanitize style values
+                const allowedAttrs = ALLOWED[tag];
+                for (const attr of Array.from(child.attributes)) {
+                    const name = attr.name.toLowerCase();
+                    if (!allowedAttrs.includes(name)) {
+                        child.removeAttribute(attr.name);
+                        continue;
+                    }
+                    if (name === 'style') {
+                        const clean = this._sanitizeStyle(attr.value, ALLOWED_STYLES);
+                        if (clean) child.setAttribute('style', clean);
+                        else child.removeAttribute('style');
+                    }
+                    // For INPUT, force type to "checkbox" literally (already verified above)
+                    if (tag === 'INPUT' && name === 'type') {
+                        child.setAttribute('type', 'checkbox');
+                    }
+                }
+                // Recurse
+                this._sanitizeNode(child);
+            }
+        },
+
+        _sanitizeStyle(styleStr, allowedProps) {
+            if (!styleStr) return '';
+            const out = [];
+            const decls = styleStr.split(';');
+            for (const decl of decls) {
+                const colonIdx = decl.indexOf(':');
+                if (colonIdx === -1) continue;
+                const prop = decl.slice(0, colonIdx).trim().toLowerCase();
+                let val = decl.slice(colonIdx + 1).trim();
+                if (!allowedProps.includes(prop)) continue;
+                // Block CSS expressions and url()
+                if (/expression\s*\(|url\s*\(|@import|javascript:/i.test(val)) continue;
+                // Restrict characters to a safe set
+                if (!/^[a-zA-Z0-9#.,()\s%\-_']+$/.test(val)) continue;
+                out.push(`${prop}:${val}`);
+            }
+            return out.join(';');
+        },
+
+        async quitApp() {
+            if (!confirm('Quitter le generateur ? Le serveur sera arrete.')) return;
+            // Save current project before quitting
+            if (this.currentProjectId) await this.autoSave();
+            try {
+                await fetch('/api/shutdown', { method: 'POST' });
+            } catch(e) { /* expected - server is shutting down */ }
+            // Close the window/tab after a short delay
+            setTimeout(() => { window.close(); }, 300);
+        },
+    };
+}
+</script>
+</body>
+</html>
