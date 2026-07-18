@@ -97,3 +97,37 @@ func TestSanitizeHTML_PreservesApostrophes(t *testing.T) {
 		t.Errorf("apostrophes altérées : %q", got)
 	}
 }
+
+func TestSanitizeLogo_ClampsFreeCoordinates(t *testing.T) {
+	x, y := -12.5, 140.0
+	p := DefaultProject()
+	p.Elements.Logos = []Logo{{ID: 1, Position: "top-right", Size: 5, X: &x, Y: &y}}
+
+	SanitizeProject(&p)
+
+	l := p.Elements.Logos[0]
+	if l.Size != 20 {
+		t.Errorf("taille non bornée: %d", l.Size)
+	}
+	if l.X == nil || *l.X != 0 {
+		t.Errorf("X non borné: %v", l.X)
+	}
+	if l.Y == nil || *l.Y != 100 {
+		t.Errorf("Y non borné: %v", l.Y)
+	}
+}
+
+func TestSanitizeLogo_AnchoredLogoUntouched(t *testing.T) {
+	p := DefaultProject()
+	p.Elements.Logos = []Logo{{ID: 1, Position: "bottom-left", Size: 120}}
+
+	SanitizeProject(&p)
+
+	l := p.Elements.Logos[0]
+	if l.X != nil || l.Y != nil {
+		t.Errorf("un logo ancré ne doit pas gagner de coordonnées: %v %v", l.X, l.Y)
+	}
+	if l.Size != 120 {
+		t.Errorf("taille modifiée: %d", l.Size)
+	}
+}

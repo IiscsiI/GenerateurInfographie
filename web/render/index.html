@@ -141,6 +141,43 @@
         }
         body.frame-mode [data-edit].ig-editing:hover { outline-color: #27ae60; }
 
+        /* Logos en placement libre (coordonnées % du conteneur) */
+        .preview-container { position: relative; }
+
+        /* WYSIWYG STRICT : en mode frame, le conteneur se met en page à la
+           LARGEUR EXACTE du viewport d'export (1200 px CSS, portrait comme
+           paysage — seule la hauteur papier varie). Sans cela, un éditeur
+           plus étroit que 1200 px re-répartirait le texte -> hauteur de
+           conteneur différente -> les positions en % des logos libres
+           tomberaient sur un autre point du contenu que dans l'export.
+           L'affichage à l'échelle est assuré par le zoom (Ajuster/75/100). */
+        body.frame-mode .preview-container { width: 1200px; max-width: 1200px; }
+        .logo-free { position: absolute; z-index: 60; margin: 0; }
+        body.frame-mode .logo-free { cursor: grab; }
+        body.frame-mode .logo-free.ig-dragging { cursor: grabbing; opacity: 0.85; }
+
+        /* Guides magnétiques */
+        .ig-guide {
+            position: absolute; z-index: 55; pointer-events: none;
+            background: #e91e63; opacity: 0.9; display: none;
+        }
+        .ig-guide.v { width: 1px; top: 0; bottom: 0; }
+        .ig-guide.h { height: 1px; left: 0; right: 0; }
+
+        /* Poignée de redimensionnement du logo sélectionné */
+        #ig-resize {
+            position: fixed; z-index: 9998; width: 14px; height: 14px;
+            background: #0056b3; border: 2px solid #fff; border-radius: 3px;
+            cursor: nwse-resize; display: none;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+        }
+
+        /* Réordonnancement au glisser */
+        body.frame-mode .preview-step-number { cursor: grab; }
+        body.frame-mode .ig-drag-source { opacity: 0.55; }
+        body.frame-mode .ig-drop-target { outline: 3px dashed #e91e63 !important; outline-offset: 3px; }
+        body.ig-no-select, body.ig-no-select * { user-select: none !important; }
+
         /* Barre de style flottante (édition rich text) */
         #ig-toolbar {
             position: fixed;
@@ -175,6 +212,7 @@
 <body>
     <div id="render-root"></div>
     <div id="infographic-ready" style="display:none;"></div>
+    <div id="ig-resize"></div>
     <div id="ig-toolbar">
         <button class="b" data-cmd="bold" title="Gras (Ctrl+B)">B</button>
         <button class="i" data-cmd="italic" title="Italique (Ctrl+I)">I</button>
@@ -221,6 +259,26 @@
 
         const dynStyle = document.createElement('style');
         document.head.appendChild(dynStyle);
+
+        // Zoom de la préviz (mode frame) : 'fit' ou facteur numérique.
+        // CSS zoom (supporté par tous les Chromium, nos seules cibles) :
+        // contrairement à transform, il participe au layout — pas de
+        // recalcul de scroll ni de hauteurs fantômes.
+        let frameZoom = 'fit';
+        function applyFrameZoom() {
+            if (!frameMode) return;
+            const cont = document.querySelector('.preview-container');
+            if (!cont) return;
+            let z = 1;
+            if (frameZoom === 'fit') {
+                cont.style.zoom = 1;
+                z = Math.min(1, Math.max(0.2, (window.innerWidth - 20) / cont.offsetWidth));
+            } else {
+                z = parseFloat(frameZoom) || 1;
+            }
+            cont.style.zoom = z;
+        }
+        window.addEventListener('resize', () => { applyFrameZoom(); positionResizeHandle(); });
 
         function applyOrientation() {
             document.body.className = orientation + (frameMode ? ' frame-mode' : '');
@@ -360,7 +418,7 @@
 
             (p.elements.logos || []).forEach((logo, i) => {
                 const src = logo.file || logo.url;
-                if (src && logo.position && logo.position.startsWith('top')) {
+                if (src && logo.x == null && logo.position && logo.position.startsWith('top')) {
                     html += `<img src="${esc(src)}" class="logo ${logo.position}"${editAttr('elements.logos.' + i)} style="max-width:${logo.size}px" alt="Logo">`;
                 }
             });
@@ -404,15 +462,36 @@
             html += `<div class="preview-footer"${editAttr('theme.colors.footer')} style="background:linear-gradient(135deg,${c.footer},${adjustBrightness(c.footer,-15)})">`;
             (p.elements.logos || []).forEach((logo, i) => {
                 const src = logo.file || logo.url;
-                if (src && logo.position && logo.position.startsWith('bottom')) {
+                if (src && logo.x == null && logo.position && logo.position.startsWith('bottom')) {
                     html += `<img src="${esc(src)}" class="logo ${logo.position}"${editAttr('elements.logos.' + i)} style="max-width:${logo.size}px" alt="Logo">`;
                 }
             });
             html += `<div${editAttr('content.footerMessage')}>${sanitizeRenderHTML(p.content.footerMessage)}</div>`;
-            html += '</div></div>';
+            html += '</div>';
+
+            // Logos en placement LIBRE : positionnés en % du conteneur.
+            // Le pourcentage garantit la même position relative en préviz,
+            // PNG, PDF et HTML autonome, quel que soit le format papier.
+            (p.elements.logos || []).forEach((logo, i) => {
+                const src = logo.file || logo.url;
+                if (src && logo.x != null && logo.y != null) {
+                    // width (pas max-width) : la taille choisie s'impose même
+                    // si l'image source est plus petite — sinon la poignée de
+                    // redimensionnement serait sans effet visuel.
+                    html += `<img src="${esc(src)}" class="logo logo-free"${editAttr('elements.logos.' + i)} style="left:${logo.x}%;top:${logo.y}%;width:${logo.size}px" alt="Logo">`;
+                }
+            });
+
+            // Guides magnétiques (affichés pendant le glisser)
+            html += '<div class="ig-guide v" id="ig-guide-cx" style="left:50%"></div>';
+            html += '<div class="ig-guide h" id="ig-guide-cy" style="top:50%"></div>';
+
+            html += '</div>';
 
             document.getElementById('render-root').innerHTML = html;
             restoreSelection();
+            applyFrameZoom();
+            positionResizeHandle();
         }
 
         /* ==========================================================================
@@ -485,6 +564,7 @@
             if (!frameMode || !selectedPath) return;
             const el = document.querySelector(`[data-edit="${CSS.escape(selectedPath)}"]`);
             if (el) el.classList.add('ig-selected');
+            positionResizeHandle();
         }
 
         /* ------------------------------------------------------------------
@@ -620,6 +700,237 @@
             }
         }
 
+        /* ==================================================================
+           INTERACTIONS POINTEUR (mode frame)
+           ------------------------------------------------------------------
+           Un routeur pointerdown unique gère, avec un seuil de 5 px pour
+           distinguer clic (sélection / édition) et glisser :
+             - déplacement libre des logos (+ guides magnétiques)
+             - redimensionnement du logo sélectionné (poignée)
+             - réordonnancement des étapes (poignée = pastille numérotée)
+             - réordonnancement des éléments de timeline
+           Pendant un glisser, l'éditeur est mis en sourdine (ig-edit-start)
+           pour ne pas re-rendre sous le pointeur ; le geste terminé, les
+           nouvelles valeurs partent en ig-edit-multi / ig-move et le rendu
+           est normalisé par la resynchronisation (ig-edit-end).
+           ================================================================== */
+        const DRAG_THRESHOLD = 5;
+        let pointer = null;      // geste en cours
+        let suppressClick = false;
+        const resizeHandle = document.getElementById('ig-resize');
+
+        function containerEl() { return document.querySelector('.preview-container'); }
+        function currentZoom() {
+            const c = containerEl();
+            return c ? (parseFloat(c.style.zoom) || 1) : 1;
+        }
+
+        function positionResizeHandle() {
+            if (!frameMode) return;
+            resizeHandle.style.display = 'none';
+            if (!selectedPath || !/^elements\.logos\.\d+$/.test(selectedPath)) return;
+            const el = document.querySelector(`[data-edit="${CSS.escape(selectedPath)}"]`);
+            if (!el) return;
+            const r = el.getBoundingClientRect();
+            resizeHandle.style.left = (r.right - 7) + 'px';
+            resizeHandle.style.top = (r.bottom - 7) + 'px';
+            resizeHandle.style.display = 'block';
+        }
+
+        function showGuide(id, on) {
+            const g = document.getElementById(id);
+            if (g) g.style.display = on ? 'block' : 'none';
+        }
+
+        function beginGesture() {
+            document.body.classList.add('ig-no-select');
+            window.parent.postMessage({ type: 'ig-edit-start', path: pointer.path || null }, '*');
+        }
+        function endGesture() {
+            document.body.classList.remove('ig-no-select');
+            showGuide('ig-guide-cx', false);
+            showGuide('ig-guide-cy', false);
+            window.parent.postMessage({ type: 'ig-edit-end' }, '*');
+        }
+
+        function onPointerDown(ev) {
+            if (!frameMode || ev.button !== 0) return;
+            if (editingEl) return; // une édition de texte est en cours
+
+            const resize = ev.target === resizeHandle;
+            const logoEl = ev.target.closest && ev.target.closest('[data-edit^="elements.logos."]');
+            const stepBadge = ev.target.closest && ev.target.closest('.preview-step-number');
+            const tlEl = ev.target.closest && ev.target.closest('[data-edit^="elements.timeline."]');
+
+            if (resize && selectedPath) {
+                const el = document.querySelector(`[data-edit="${CSS.escape(selectedPath)}"]`);
+                if (!el) return;
+                const idx = parseInt(selectedPath.split('.')[2], 10);
+                const logo = currentProject.elements.logos[idx];
+                pointer = {
+                    mode: 'resize', el, idx, path: selectedPath,
+                    startX: ev.clientX, startSize: logo.size,
+                    ratio: logo.size / Math.max(1, el.getBoundingClientRect().width),
+                    started: true
+                };
+                beginGesture();
+                ev.preventDefault();
+                return;
+            }
+            if (logoEl) {
+                pointer = { mode: 'logo', el: logoEl, path: logoEl.getAttribute('data-edit'),
+                            startX: ev.clientX, startY: ev.clientY, started: false };
+            } else if (stepBadge) {
+                const stepEl = stepBadge.closest('[data-edit^="elements.steps."]');
+                if (!stepEl) return;
+                pointer = { mode: 'step', el: stepEl, path: stepEl.getAttribute('data-edit'),
+                            startX: ev.clientX, startY: ev.clientY, started: false };
+            } else if (tlEl) {
+                pointer = { mode: 'timeline', el: tlEl, path: tlEl.getAttribute('data-edit'),
+                            startX: ev.clientX, startY: ev.clientY, started: false };
+            }
+        }
+
+        function startDragIfNeeded(ev) {
+            if (pointer.started) return true;
+            if (Math.abs(ev.clientX - pointer.startX) < DRAG_THRESHOLD
+                && Math.abs(ev.clientY - pointer.startY) < DRAG_THRESHOLD) return false;
+            pointer.started = true;
+            suppressClick = true;
+            beginGesture();
+
+            if (pointer.mode === 'logo') {
+                const el = pointer.el, cont = containerEl();
+                const z = currentZoom();
+                const cr = cont.getBoundingClientRect();
+                const r = el.getBoundingClientRect();
+                // Un logo ancré devient libre : rattaché au conteneur à sa
+                // position visuelle actuelle (le modèle suivra au lâcher).
+                if (!el.classList.contains('logo-free')) {
+                    el.classList.remove('top-left','top-center','top-right','bottom-left','bottom-center','bottom-right');
+                    el.classList.add('logo-free');
+                    cont.appendChild(el);
+                }
+                pointer.grabDX = ev.clientX - r.left;
+                pointer.grabDY = ev.clientY - r.top;
+                pointer.contRect = cr;
+                pointer.imgW = r.width; pointer.imgH = r.height;
+                pointer.zoom = z;
+                el.classList.add('ig-dragging');
+            } else {
+                pointer.el.classList.add('ig-drag-source');
+            }
+            return true;
+        }
+
+        function onPointerMove(ev) {
+            if (!pointer) return;
+            if (!startDragIfNeeded(ev)) return;
+            ev.preventDefault();
+
+            // Auto-défilement aux bords : permet d'atteindre une cible hors
+            // écran pendant un glisser (page haute, nombreuses étapes).
+            const EDGE = 60, STEP = 16;
+            if (ev.clientY > window.innerHeight - EDGE) window.scrollBy(0, STEP);
+            else if (ev.clientY < EDGE) window.scrollBy(0, -STEP);
+
+            if (pointer.mode === 'logo') {
+                const { contRect: cr, zoom: z } = pointer;
+                // Coordonnées en % du conteneur (indépendantes du zoom et du format)
+                let xPct = ((ev.clientX - pointer.grabDX - cr.left) / cr.width) * 100;
+                let yPct = ((ev.clientY - pointer.grabDY - cr.top) / cr.height) * 100;
+                const wPct = (pointer.imgW / cr.width) * 100;
+                const hPct = (pointer.imgH / cr.height) * 100;
+
+                // Aimants : centres de page (seuil 1.2 %)
+                const SNAP = 1.2;
+                let snapX = false, snapY = false;
+                if (Math.abs(xPct + wPct / 2 - 50) < SNAP) { xPct = 50 - wPct / 2; snapX = true; }
+                if (Math.abs(yPct + hPct / 2 - 50) < SNAP) { yPct = 50 - hPct / 2; snapY = true; }
+                showGuide('ig-guide-cx', snapX);
+                showGuide('ig-guide-cy', snapY);
+
+                // Le logo reste entièrement dans l'affiche
+                xPct = Math.max(0, Math.min(xPct, 100 - wPct));
+                yPct = Math.max(0, Math.min(yPct, 100 - hPct));
+
+                pointer.el.style.left = xPct + '%';
+                pointer.el.style.top = yPct + '%';
+                pointer.x = xPct; pointer.y = yPct;
+                positionResizeHandle();
+
+            } else if (pointer.mode === 'resize') {
+                const dx = ev.clientX - pointer.startX;
+                let size = Math.round(pointer.startSize + dx * pointer.ratio);
+                size = Math.max(20, Math.min(600, size));
+                pointer.size = size;
+                pointer.el.style.maxWidth = size + 'px';
+                positionResizeHandle();
+
+            } else {
+                // Réordonnancement : surligner la cible sous le pointeur.
+                // On remonte depuis l'élément survolé jusqu'au CONTENEUR
+                // d'étape/timeline (chemin en 3 segments : elements.steps.N),
+                // car le pointeur atterrit souvent sur un enfant (titre,
+                // action) porteur d'un data-edit plus profond.
+                const prefix = pointer.mode === 'step' ? 'elements.steps.' : 'elements.timeline.';
+                document.querySelectorAll('.ig-drop-target').forEach(e => e.classList.remove('ig-drop-target'));
+                pointer.dropPath = null;
+                const under = document.elementFromPoint(ev.clientX, ev.clientY);
+                let cand = under && under.closest ? under.closest(`[data-edit^="${prefix}"]`) : null;
+                while (cand) {
+                    if (cand === pointer.el) break; // survol de la source
+                    const t = cand.getAttribute('data-edit');
+                    if (t.split('.').length === 3) {
+                        cand.classList.add('ig-drop-target');
+                        pointer.dropPath = t;
+                        break;
+                    }
+                    cand = cand.parentElement
+                        ? cand.parentElement.closest(`[data-edit^="${prefix}"]`)
+                        : null;
+                }
+            }
+        }
+
+        function onPointerUp() {
+            if (!pointer) return;
+            const p = pointer; pointer = null;
+
+            if (!p.started) return; // simple clic : le handler click fait son travail
+
+            if (p.mode === 'logo') {
+                p.el.classList.remove('ig-dragging');
+                window.parent.postMessage({ type: 'ig-edit-multi', edits: [
+                    { path: p.path + '.x', value: Math.round(p.x * 100) / 100 },
+                    { path: p.path + '.y', value: Math.round(p.y * 100) / 100 }
+                ]}, '*');
+            } else if (p.mode === 'resize') {
+                if (p.size != null) {
+                    window.parent.postMessage({ type: 'ig-edit', path: p.path + '.size', value: p.size }, '*');
+                }
+            } else {
+                p.el.classList.remove('ig-drag-source');
+                document.querySelectorAll('.ig-drop-target').forEach(e => e.classList.remove('ig-drop-target'));
+                if (p.dropPath) {
+                    const from = parseInt(p.path.split('.')[2], 10);
+                    const to = parseInt(p.dropPath.split('.')[2], 10);
+                    if (from !== to) {
+                        window.parent.postMessage({ type: 'ig-move',
+                            kind: p.mode, from, to }, '*');
+                    }
+                }
+            }
+            endGesture();
+            setTimeout(() => { suppressClick = false; }, 0);
+        }
+
+        if (frameMode) {
+            document.addEventListener('pointerdown', onPointerDown, true);
+            document.addEventListener('pointermove', onPointerMove, true);
+            document.addEventListener('pointerup', onPointerUp, true);
+        }
+
         if (frameMode) {
             // Barre de style : execCommand s'applique à la sélection courante
             toolbar.addEventListener('mousedown', (ev) => ev.preventDefault());
@@ -674,20 +985,23 @@
                 const msg = ev.data;
                 if (!msg || typeof msg !== 'object') return;
                 if (msg.type === 'ig-render' && msg.project) {
-                    if (editingEl) { pendingRender = msg; return; } // ne pas casser la frappe
+                    if (editingEl || pointer) { pendingRender = msg; return; } // ne pas casser le geste
                     currentProject = msg.project;
                     if (msg.orientation) orientation = msg.orientation;
+                    if (msg.zoom) frameZoom = msg.zoom;
                     try { render(); } catch (e) { console.error('render:', e); }
                 } else if (msg.type === 'ig-select-path') {
                     stopInlineEdit(true);
                     selectedPath = msg.path || null;
                     document.querySelectorAll('.ig-selected').forEach(el => el.classList.remove('ig-selected'));
                     restoreSelection();
+                    positionResizeHandle();
                 }
             });
 
             document.addEventListener('click', (ev) => {
-                if (ev.target.closest('#ig-toolbar')) return;
+                if (suppressClick) { ev.preventDefault(); ev.stopPropagation(); return; }
+                if (ev.target.closest('#ig-toolbar') || ev.target === resizeHandle) return;
                 const target = ev.target.closest('[data-edit]');
                 if (editingEl && target === editingEl) return; // clic dans le champ en cours
                 if (editingEl) stopInlineEdit(true);
@@ -696,6 +1010,7 @@
                 selectedPath = target.getAttribute('data-edit');
                 document.querySelectorAll('.ig-selected').forEach(el => el.classList.remove('ig-selected'));
                 target.classList.add('ig-selected');
+                positionResizeHandle();
                 window.parent.postMessage({ type: 'ig-select', path: selectedPath }, '*');
 
                 // Édition directe pour les natures textuelles

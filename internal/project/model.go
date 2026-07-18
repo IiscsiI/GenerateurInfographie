@@ -56,12 +56,22 @@ type Elements struct {
 }
 
 // Logo represents a logo element.
+//
+// Deux modes de placement coexistent (compatibilité v4.0) :
+//   - ancré  : X et Y absents -> le logo suit son ancre Position
+//     (top-left ... bottom-right), rendu dans le flux en-tête/pied.
+//   - libre  : X et Y présents -> position absolue dans l'affiche,
+//     exprimée en POURCENTAGES du conteneur (coin haut-gauche du logo).
+//     Les pourcentages garantissent un rendu identique quel que soit le
+//     format papier (préviz, PNG, PDF, HTML autonome).
 type Logo struct {
-	ID       int    `json:"id"`
-	URL      string `json:"url,omitempty"`
-	File     string `json:"file,omitempty"`
-	Position string `json:"position"`
-	Size     int    `json:"size"`
+	ID       int      `json:"id"`
+	URL      string   `json:"url,omitempty"`
+	File     string   `json:"file,omitempty"`
+	Position string   `json:"position"`
+	Size     int      `json:"size"`
+	X        *float64 `json:"x,omitempty"`
+	Y        *float64 `json:"y,omitempty"`
 }
 
 // TimelineItem represents a timeline element.
@@ -101,8 +111,8 @@ type Action struct {
 // DefaultProject returns a new project with default content.
 func DefaultProject() Project {
 	return Project{
-		Version:   "4.0",
-		Generator: "Generateur Infographie v2.1 (Go)",
+		Version:   "4.1",
+		Generator: "Generateur Infographie v2.2 (Go)",
 		Metadata: Metadata{
 			Name:    "Nouveau Projet",
 			Author:  "",

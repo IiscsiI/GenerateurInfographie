@@ -255,6 +255,7 @@
             z-index: 600;
             font-size: 13px;
         }
+        .ctx-panel h4 { cursor: move; }
         .ctx-panel h4 {
             margin: 0 0 10px;
             color: var(--primary);
@@ -758,6 +759,11 @@
         <div class="text-center mb-15" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
             <h3 style="color:var(--primary);margin:0;">&#x1F441;&#xFE0F; Apercu en temps reel</h3>
             <span style="font-size:12px;color:#6c757d;">&#x1F446; Cliquez un element de l'affiche pour l'editer</span>
+            <div class="orientation-toggle" title="Zoom de l'apercu" style="margin-right:6px;">
+                <button :class="{active: previewZoom === 'fit'}" @click="previewZoom = 'fit'" title="Ajuster a la largeur">&#x2194;&#xFE0F; Ajuster</button>
+                <button :class="{active: previewZoom === '0.75'}" @click="previewZoom = '0.75'">75%</button>
+                <button :class="{active: previewZoom === '1'}" @click="previewZoom = '1'">100%</button>
+            </div>
             <div class="orientation-toggle" title="Apercu : orientation du document exporte">
                 <button :class="{active: previewOrientation === 'portrait'}" @click="previewOrientation = 'portrait'">&#x1F4C4; Portrait</button>
                 <button :class="{active: previewOrientation === 'landscape'}" @click="previewOrientation = 'landscape'">&#x1F5BC;&#xFE0F; Paysage</button>
@@ -769,10 +775,10 @@
              s'editent directement dans la previz ; tout le reste (couleurs,
              categories, positions, structure) se pilote ici.
              ================================================================== -->
-        <div class="ctx-panel" x-show="sel" x-transition.opacity @click.stop>
+        <div class="ctx-panel" x-show="sel" x-transition.opacity @click.stop :style="panelPos ? `left:${panelPos.x}px;top:${panelPos.y}px;right:auto;` : ''">
             <template x-if="sel">
                 <div>
-                    <h4>
+                    <h4 @pointerdown="panelDragStart($event)" title="Glisser pour deplacer le panneau">
                         <span x-text="sel.title"></span>
                         <button class="ctx-close" @click="clearSelection()" title="Fermer">&#x2715;</button>
                     </h4>
@@ -871,8 +877,22 @@
                     <!-- LOGO -->
                     <template x-if="sel.kind === 'logo'">
                         <div>
-                            <label>Position</label>
-                            <select x-model="project.elements.logos[sel.li].position">
+                            <template x-if="project.elements.logos[sel.li].x != null">
+                                <div>
+                                    <label>Placement libre (% de l'affiche)</label>
+                                    <div style="display:flex;gap:6px;">
+                                        <input type="number" min="0" max="100" step="0.5" x-model.number="project.elements.logos[sel.li].x" title="X (%)">
+                                        <input type="number" min="0" max="100" step="0.5" x-model.number="project.elements.logos[sel.li].y" title="Y (%)">
+                                    </div>
+                                    <div class="ctx-row">
+                                        <button class="btn btn-sm" @click="project.elements.logos[sel.li].x = null; project.elements.logos[sel.li].y = null;">&#x1F9F2; Revenir a l'ancrage</button>
+                                    </div>
+                                    <p class="ctx-hint">&#x1F4A1; Glissez le logo dans l'affiche pour le placer ; tirez la poignee bleue pour le redimensionner.</p>
+                                </div>
+                            </template>
+                            <label>Position (ancrage)</label>
+                            <select x-model="project.elements.logos[sel.li].position"
+                                    @change="project.elements.logos[sel.li].x = null; project.elements.logos[sel.li].y = null;">
                                 <option value="top-left">&#x2196;&#xFE0F; Haut gauche</option>
                                 <option value="top-center">&#x2B06;&#xFE0F; Haut centre</option>
                                 <option value="top-right">&#x2197;&#xFE0F; Haut droite</option>
@@ -1238,7 +1258,7 @@ function infographicApp() {
             return out;
         };
         const project = (meta, content, theme, elements) => ({
-            _version: '4.0',
+            _version: '4.1',
             metadata: Object.assign({ name: 'Nouveau Projet', author: '', organization: '', license: 'AGPL-3.0 / Commercial' }, meta),
             content,
             theme: { colors: theme, fontSize: 100, fontFamily: 'system' },
@@ -1567,6 +1587,9 @@ function infographicApp() {
         // WYSIWYG : selection courante dans la previz + silencieux de resync
         selPath: null,
         _syncMuted: false,
+        previewZoom: 'fit',
+        panelPos: null,
+        _panelDrag: null,
 
         // Save status
         saveStatus: 'saved',
@@ -1681,9 +1704,11 @@ function infographicApp() {
             this.$nextTick(() => this.pushSelectionToFrame());
         },
 
-        // Edition in-place : application d'une valeur par chemin pointe
+        // Edition in-place : application d'une valeur par chemin pointe.
+        // Chaines (textes) et nombres (coordonnees, tailles) uniquement.
         applyFrameEdit(path, value) {
-            if (typeof path !== 'string' || typeof value !== 'string') return;
+            if (typeof path !== 'string') return;
+            if (typeof value !== 'string' && typeof value !== 'number') return;
             const t = path.split('.');
             let o = this.project;
             for (let i = 0; i < t.length - 1; i++) {
@@ -1693,6 +1718,42 @@ function infographicApp() {
             o[t[t.length - 1]] = value;
         },
 
+        // Reordonnancement demande depuis la previz (glisser-deposer)
+        applyFrameMove(kind, from, to) {
+            let arr = null, basePath = '';
+            if (kind === 'step') { arr = this.project.elements.steps; basePath = 'elements.steps.'; }
+            else if (kind === 'timeline') { arr = this.project.elements.timeline; basePath = 'elements.timeline.'; }
+            if (!arr) return;
+            if (from < 0 || to < 0 || from >= arr.length || to >= arr.length || from === to) return;
+            const [moved] = arr.splice(from, 1);
+            arr.splice(to, 0, moved);
+            this.selPath = basePath + to;
+            this.$nextTick(() => this.pushSelectionToFrame());
+        },
+
+        // Deplacement du panneau contextuel
+        panelDragStart(ev) {
+            if (ev.target.closest('.ctx-close')) return;
+            const panel = ev.target.closest('.ctx-panel');
+            if (!panel) return;
+            const r = panel.getBoundingClientRect();
+            this._panelDrag = { dx: ev.clientX - r.left, dy: ev.clientY - r.top, w: r.width, h: r.height };
+            const move = (e) => {
+                if (!this._panelDrag) return;
+                const x = Math.max(4, Math.min(e.clientX - this._panelDrag.dx, window.innerWidth - this._panelDrag.w - 4));
+                const y = Math.max(4, Math.min(e.clientY - this._panelDrag.dy, window.innerHeight - 60));
+                this.panelPos = { x, y };
+            };
+            const up = () => {
+                this._panelDrag = null;
+                window.removeEventListener('pointermove', move);
+                window.removeEventListener('pointerup', up);
+            };
+            window.addEventListener('pointermove', move);
+            window.addEventListener('pointerup', up);
+            ev.preventDefault();
+        },
+
         syncPreview() {
             const frame = document.getElementById('preview-frame');
             if (!frame || !frame.contentWindow) return;
@@ -1700,7 +1761,8 @@ function infographicApp() {
             frame.contentWindow.postMessage({
                 type: 'ig-render',
                 project: JSON.parse(JSON.stringify(this.project)),
-                orientation: this.previewOrientation
+                orientation: this.previewOrientation,
+                zoom: this.previewZoom
             }, window.location.origin);
         },
 
@@ -1769,6 +1831,14 @@ function infographicApp() {
         // INIT
         // ============================================
         async init() {
+            // GARDE D'IDEMPOTENCE — Alpine v3 appelle automatiquement la
+            // méthode init() d'un composant, et le markup porte AUSSI
+            // x-init="init()" : sans cette garde, tout ce bloc s'exécute
+            // deux fois (double écouteur message -> chaque réordonnancement
+            // appliqué deux fois, double raccourci Ctrl+Z, etc.).
+            if (this._initDone) return;
+            this._initDone = true;
+
             await this.checkBrowser();
             await this.refreshProjectList();
 
@@ -1797,6 +1867,10 @@ function infographicApp() {
                 else if (msg.type === 'ig-select') this.selPath = msg.path || null;
                 else if (msg.type === 'ig-edit-start') this._syncMuted = true;
                 else if (msg.type === 'ig-edit') this.applyFrameEdit(msg.path, msg.value);
+                else if (msg.type === 'ig-edit-multi' && Array.isArray(msg.edits)) {
+                    msg.edits.forEach(e => this.applyFrameEdit(e.path, e.value));
+                }
+                else if (msg.type === 'ig-move') this.applyFrameMove(msg.kind, msg.from, msg.to);
                 else if (msg.type === 'ig-edit-end') {
                     this._syncMuted = false;
                     this.syncPreview(); // normalise le rendu apres edition
@@ -1805,6 +1879,7 @@ function infographicApp() {
             // Filet de securite si le signal ig-ready s'est perdu au demarrage
             setTimeout(() => this.syncPreview(), 500);
             this.$watch('previewOrientation', () => this.syncPreview());
+            this.$watch('previewZoom', () => this.syncPreview());
 
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {

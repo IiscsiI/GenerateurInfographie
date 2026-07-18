@@ -18,6 +18,36 @@ func SanitizeProject(p *Project) {
 			p.Elements.Steps[i].Actions[j].Text = SanitizeHTML(p.Elements.Steps[i].Actions[j].Text)
 		}
 	}
+	for i := range p.Elements.Logos {
+		sanitizeLogo(&p.Elements.Logos[i])
+	}
+}
+
+// sanitizeLogo borne les valeurs numériques d'un logo.
+// Les coordonnées libres sont des pourcentages du conteneur : [0;100].
+func sanitizeLogo(l *Logo) {
+	if l.Size < 20 {
+		l.Size = 20
+	}
+	if l.Size > 600 {
+		l.Size = 600
+	}
+	l.X = clampPct(l.X)
+	l.Y = clampPct(l.Y)
+}
+
+func clampPct(v *float64) *float64 {
+	if v == nil {
+		return nil
+	}
+	c := *v
+	if c < 0 {
+		c = 0
+	}
+	if c > 100 {
+		c = 100
+	}
+	return &c
 }
 
 // SanitizeHTML filters user-supplied HTML with a strict whitelist.

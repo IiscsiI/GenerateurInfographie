@@ -1,99 +1,192 @@
-Générateur d’Infographie Cybersécurité
-Copyright (C) 2025 Pierre-Eric Guillemin
-
-Licence : GNU Affero General Public License v3.0 (AGPLv3),
-modifiée par les conditions additionnelles ci-dessous conformément à l’article 7 de ladite licence.
-
 ====================================================================
-                CONDITIONS ADDITIONNELLES / ADDITIONAL TERMS
+     LICENCE D'UTILISATION LIBRE NON COMMERCIALE (LULNC) v1.0
+     Générateur d'Infographie Cybersécurité
 ====================================================================
 
-------------------------------
-Article 1 – Objet et champ d’application  
-Article 1 – Purpose and Scope
-------------------------------
+Copyright (C) 2025-2026 Pierre-Eric Guillemin
+Tous droits réservés, hors les droits expressément concédés ci-dessous.
 
-Le présent logiciel est distribué sous les termes de la licence libre GNU Affero General Public License, version 3 ou ultérieure, telle que publiée par la Free Software Foundation, à l’exception des restrictions additionnelles définies dans le présent document.  
-
-This software is distributed under the terms of the GNU Affero General Public License version 3 or later, as published by the Free Software Foundation, except for the additional restrictions defined herein.
+La version française du présent document fait seule foi ; la synthèse
+en anglais fournie en fin de document n'a qu'une valeur informative.
 
 
-------------------------------
-Article 2 – Usage autorisé  
-Article 2 – Authorized Use
-------------------------------
+--------------------------------------------------------------------
+Article 1 - Objet
+--------------------------------------------------------------------
 
-L’usage du logiciel, en tout ou partie, est libre, gratuit et autorisé pour :
+La présente licence a pour objet de permettre une utilisation libre,
+gratuite et ouverte du logiciel « Générateur d'Infographie
+Cybersécurité » (ci-après « le Logiciel »), y compris de son code
+source, tout en interdisant toute exploitation commerciale du
+Logiciel ou toute prestation rémunérée réalisée au moyen du Logiciel.
 
-- les administrations de l’État, les établissements publics nationaux ;  
-- les collectivités territoriales et leurs établissements publics ;  
-- les établissements d’enseignement, les établissements de santé publics ;  
-- les associations reconnues d’utilité publique ou à but non lucratif poursuivant une mission d’intérêt général.
-
-Ces entités peuvent utiliser, modifier, adapter et redistribuer le logiciel selon les termes de l’AGPLv3, à condition de respecter les obligations de mise à disposition du code source et de mention du droit d’auteur.
-
-Use of the software, in whole or in part, is free of charge and permitted for:
-
-- State administrations and national public institutions;  
-- Local authorities and their public institutions;  
-- Educational institutions and public health organizations;  
-- Non-profit or public-interest organizations recognized as serving the common good.
-
-These entities may use, modify, adapt, and redistribute the software under the terms of the AGPLv3, provided they comply with source disclosure and attribution obligations.
+Le Logiciel est mis à disposition avec son code source complet.
+Cette licence n'est pas une licence « open source » au sens de
+l'Open Source Initiative, ni une licence « libre » au sens de la
+Free Software Foundation, car elle restreint l'usage commercial.
+Il s'agit d'une licence dite « source disponible, non commerciale ».
 
 
-------------------------------
-Article 3 – Usage interdit sans licence commerciale  
-Article 3 – Prohibited Use Without Commercial License
-------------------------------
+--------------------------------------------------------------------
+Article 2 - Définitions
+--------------------------------------------------------------------
 
-Tout usage du logiciel dans un cadre **commercial ou lucratif** est strictement interdit sans autorisation expresse et licence commerciale délivrée par l’auteur.
+« Logiciel » : le programme « Générateur d'Infographie
+Cybersécurité », son code source, ses binaires, sa documentation et
+les fichiers qui l'accompagnent, en tout ou partie, modifiés ou non.
 
-Sont notamment considérés comme usages commerciaux :
-- l’utilisation dans le cadre d’activités de conseil, d’audit, d’intégration ou de formation facturées ;  
-- l’intégration dans un produit ou service vendu, hébergé ou mis à disposition contre rémunération ;  
-- toute utilisation par une entreprise privée, une société de services, une ESN, un consultant indépendant ou toute entité exerçant une activité commerciale.
+« Usage commercial » : toute utilisation du Logiciel qui procure ou
+vise à procurer, directement ou indirectement, un avantage
+commercial ou une contrepartie financière, et notamment :
+  a) la vente, la location, la sous-licence ou toute monétisation du
+     Logiciel ou d'une version modifiée de celui-ci ;
+  b) la fourniture de prestations rémunérées réalisées au moyen du
+     Logiciel : conseil, audit, formation payante, production de
+     livrables facturés (affiches, fiches réflexe, infographies ou
+     tout autre document généré avec le Logiciel) ;
+  c) l'intégration du Logiciel, en tout ou partie, dans un produit,
+     un service ou une offre commerciale, y compris en mode hébergé
+     (SaaS) ;
+  d) l'utilisation interne du Logiciel par une entité à but lucratif
+     ou pour le compte d'une telle entité.
 
-Toute utilisation à des fins commerciales sans accord explicite constitue une violation du droit d’auteur au sens du Code de la propriété intellectuelle (articles L122-4 et suivants).
-
-Any **commercial or for-profit** use of the software is strictly prohibited without express authorization and a commercial license granted by the author.
-
-The following are considered commercial uses:
-- Use in consulting, auditing, integration, or training services for which payment is received;  
-- Integration into a product or service sold, hosted, or otherwise provided for remuneration;  
-- Use by private companies, IT service providers, consultants, or any entity engaging in commercial activity.
-
-Any commercial use without explicit authorization constitutes a copyright infringement under the French Intellectual Property Code (Articles L122-4 and following).
-
-
-------------------------------
-Article 4 – Compatibilité avec l’AGPLv3  
-Article 4 – Compatibility with AGPLv3
-------------------------------
-
-Les dispositions de la licence GNU AGPL v3 demeurent pleinement applicables, à l’exception des limitations introduites ci-dessus.  
-En cas de contradiction entre ces conditions additionnelles et la licence AGPLv3, les présentes conditions prévalent dans la limite de leur objet.
-
-All provisions of the GNU AGPLv3 remain fully applicable, except for the limitations introduced above.  
-In the event of a conflict between these additional terms and the AGPLv3, these terms shall prevail to the extent of their subject matter.
+« Usage non commercial » : toute utilisation ne relevant pas de
+l'Usage commercial tel que défini ci-dessus.
 
 
-------------------------------
-Article 5 – Droit applicable  
-Article 5 – Governing Law
-------------------------------
+--------------------------------------------------------------------
+Article 3 - Droits concédés (usage non commercial)
+--------------------------------------------------------------------
 
-Le présent texte est soumis au droit français.  
-Tout litige relatif à l’interprétation ou à l’exécution de la présente licence sera soumis aux tribunaux compétents du ressort de la Cour d’appel de Paris, sauf disposition légale contraire.
+Sous réserve du respect de la présente licence, l'auteur concède à
+toute personne, à titre gratuit, non exclusif et pour le monde
+entier, le droit, pour un Usage non commercial exclusivement :
 
-This text is governed by French law.  
-Any dispute relating to the interpretation or performance of this license shall fall under the jurisdiction of the courts within the jurisdiction of the Paris Court of Appeal, unless otherwise required by law.
+  a) d'utiliser et d'exécuter le Logiciel, sans limitation de durée
+     ni de nombre de postes ;
+  b) d'en étudier le fonctionnement et d'accéder à son code source ;
+  c) de le copier et de le redistribuer, gratuitement, accompagné de
+     la présente licence et de son code source ;
+  d) de le modifier et de redistribuer gratuitement les versions
+     modifiées, sous la présente licence exclusivement, en indiquant
+     clairement les modifications apportées et leur date.
+
+Sont notamment couverts par l'Usage non commercial, y compris dans
+le cadre de leurs missions et activités habituelles :
+
+  - les particuliers, pour tout usage personnel ;
+  - les administrations de l'État et leurs opérateurs ;
+  - les collectivités territoriales et leurs établissements ;
+  - les établissements publics de santé et hospitaliers ;
+  - les établissements d'enseignement et de recherche publics ;
+  - les associations à but non lucratif, dans le cadre de leur objet
+    non lucratif.
+
+Un agent public ou hospitalier qui utilise le Logiciel dans le cadre
+de ses fonctions, y compris rémunérées, relève de l'Usage non
+commercial : c'est la nature de l'entité et de l'activité qui est
+déterminante, non l'existence d'un salaire.
+
+
+--------------------------------------------------------------------
+Article 4 - Restrictions
+--------------------------------------------------------------------
+
+Sont interdits sans licence commerciale écrite préalable de
+l'auteur :
+
+  a) tout Usage commercial tel que défini à l'article 2 ;
+  b) la suppression ou l'altération des mentions de copyright, de
+     licence ou de paternité figurant dans le Logiciel ;
+  c) la redistribution du Logiciel, modifié ou non, sous une autre
+     licence que la présente ;
+  d) l'utilisation du nom de l'auteur ou du nom du Logiciel pour
+     promouvoir un produit ou service dérivé, sans autorisation
+     écrite.
+
+Les documents produits AVEC le Logiciel (affiches, fiches réflexe)
+appartiennent à leurs auteurs et peuvent être diffusés librement par
+ceux-ci, dès lors que leur production ne constitue pas une
+prestation rémunérée au sens de l'article 2 b).
+
+
+--------------------------------------------------------------------
+Article 5 - Licence commerciale
+--------------------------------------------------------------------
+
+Toute entité souhaitant faire un Usage commercial du Logiciel
+(utilisation en entreprise privée, intégration à une offre,
+prestations rémunérées, etc.) doit obtenir une licence commerciale
+auprès de l'auteur, à des conditions convenues d'un commun accord.
+
+Contact : via le dépôt GitHub du projet
+(https://github.com/IiscsiI/GenerateurInfographie).
+
+
+--------------------------------------------------------------------
+Article 6 - Absence de garantie et limitation de responsabilité
+--------------------------------------------------------------------
+
+LE LOGICIEL EST FOURNI « EN L'ÉTAT », SANS GARANTIE D'AUCUNE SORTE,
+EXPRESSE OU IMPLICITE, Y COMPRIS NOTAMMENT LES GARANTIES DE QUALITÉ
+MARCHANDE, D'ADÉQUATION À UN USAGE PARTICULIER ET D'ABSENCE DE
+CONTREFAÇON. EN AUCUN CAS L'AUTEUR NE POURRA ÊTRE TENU RESPONSABLE
+D'UN QUELCONQUE DOMMAGE RÉSULTANT DE L'UTILISATION OU DE
+L'IMPOSSIBILITÉ D'UTILISER LE LOGICIEL, DANS LA LIMITE AUTORISÉE PAR
+LE DROIT APPLICABLE.
+
+L'utilisateur demeure seul responsable du contenu des documents
+qu'il produit avec le Logiciel et de leur conformité aux procédures
+de son organisation.
+
+
+--------------------------------------------------------------------
+Article 7 - Résiliation
+--------------------------------------------------------------------
+
+Les droits concédés par la présente licence prennent fin de plein
+droit en cas de violation de ses termes. Ils peuvent être rétablis
+par l'auteur si la violation cesse et est réparée.
+
+
+--------------------------------------------------------------------
+Article 8 - Droit applicable
+--------------------------------------------------------------------
+
+La présente licence est régie par le droit français. Tout litige
+relatif à son interprétation ou à son exécution relève des
+juridictions françaises compétentes.
 
 
 ====================================================================
-Original GNU Affero General Public License v3.0:
-https://www.gnu.org/licenses/agpl-3.0.html
-
-For any commercial license or partnership request, contact:
-Pierre-Eric Guillemin – [A venir]
+ENGLISH SUMMARY (informative only - the French text prevails)
 ====================================================================
+
+Free Non-Commercial Use License (LULNC) v1.0
+Copyright (C) 2025-2026 Pierre-Eric Guillemin
+
+You may, free of charge and for NON-COMMERCIAL purposes only: use
+and run the Software without limitation; study it and access its
+source code; copy and redistribute it for free with this license;
+modify it and redistribute modified versions for free under this
+same license, clearly marking your changes.
+
+Non-commercial use expressly includes: individuals (personal use),
+state administrations, local authorities, public hospitals and
+health institutions, public education and research institutions,
+and non-profit organizations acting within their non-profit purpose.
+
+The following require a separate commercial license from the
+author: any sale, rental or monetization of the Software; paid
+services performed with the Software (consulting, training, billed
+deliverables); integration into any commercial product, service or
+SaaS offering; and any internal use by or on behalf of a for-profit
+entity.
+
+Documents produced WITH the Software belong to their authors and
+may be freely shared, as long as producing them is not a paid
+service.
+
+This is a "source-available, non-commercial" license. It is not an
+OSI-approved open source license. THE SOFTWARE IS PROVIDED "AS IS",
+WITHOUT WARRANTY OF ANY KIND. French law applies.
