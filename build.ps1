@@ -30,7 +30,7 @@ $ProgressPreference = "SilentlyContinue"
 
 # --- Configuration ---
 $vendorDir = "web\editor\vendor"
-$version = "2.2.1"
+$version = "2.3.0"
 
 # Versions epinglees : ne pas passer en "latest" — la reproductibilite du
 # build et la stabilite de l'editeur en dependent.

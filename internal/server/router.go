@@ -66,6 +66,12 @@ func (s *Server) Router() http.Handler {
 	// Import
 	mux.HandleFunc("POST /api/import", s.handleImport)
 
+	// Modeles personnalises
+	mux.HandleFunc("GET /api/templates", s.handleListTemplates)
+	mux.HandleFunc("POST /api/templates", s.handleSaveTemplate)
+	mux.HandleFunc("GET /api/templates/{id}", s.handleGetTemplate)
+	mux.HandleFunc("DELETE /api/templates/{id}", s.handleDeleteTemplate)
+
 	// Browser status
 	mux.HandleFunc("GET /api/browser/status", s.handleBrowserStatus)
 

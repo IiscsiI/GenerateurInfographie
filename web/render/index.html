@@ -176,6 +176,27 @@
         body.frame-mode .preview-step-number { cursor: grab; }
         body.frame-mode .ig-drag-source { opacity: 0.55; }
         body.frame-mode .ig-drop-target { outline: 3px dashed #e91e63 !important; outline-offset: 3px; }
+
+        /* Bouton d'ajout d'étape (préviz uniquement, jamais dans les exports) */
+        body.frame-mode .ig-add-step {
+            border: 3px dashed #b8c2cc;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 180px;
+            color: #8a97a5;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            user-select: none;
+            transition: all .2s;
+        }
+        body.frame-mode .ig-add-step:hover {
+            border-color: #0056b3;
+            color: #0056b3;
+            background: rgba(0, 86, 179, 0.05);
+        }
         body.ig-no-select, body.ig-no-select * { user-select: none !important; }
 
         /* Barre de style flottante (édition rich text) */
@@ -453,6 +474,11 @@
                 });
                 html += '</div></div>';
             });
+            if (frameMode) {
+                // Ajout direct depuis l'affiche — jamais rendu dans les exports
+                // (frameMode est faux dans les pages d'export et le HTML autonome)
+                html += '<div class="ig-add-step" title="Ajouter une etape">\u2795 Ajouter une \u00e9tape</div>';
+            }
             html += '</div>';
 
             if (p.content.emergencyMessage) {
@@ -1002,6 +1028,10 @@
             document.addEventListener('click', (ev) => {
                 if (suppressClick) { ev.preventDefault(); ev.stopPropagation(); return; }
                 if (ev.target.closest('#ig-toolbar') || ev.target === resizeHandle) return;
+                if (ev.target.closest('.ig-add-step')) {
+                    window.parent.postMessage({ type: 'ig-add', kind: 'step' }, '*');
+                    return;
+                }
                 const target = ev.target.closest('[data-edit]');
                 if (editingEl && target === editingEl) return; // clic dans le champ en cours
                 if (editingEl) stopInlineEdit(true);

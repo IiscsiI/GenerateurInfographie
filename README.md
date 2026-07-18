@@ -145,6 +145,8 @@ Conçu pour des procédures de sécurité, l'outil applique ses propres règles 
 
 **Une fenêtre blanche apparaît brièvement pendant un export** — Comportement normal de la stratégie de secours « fenêtre hors écran » quand le mode invisible du navigateur est indisponible sur le poste.
 
+**Écran tactile** — Le glisser tactile (logos, réordonnancement) est partiellement fonctionnel ; l'usage à la souris reste le mode supporté à ce stade.
+
 **L'application semble encore active après fermeture** — Elle s'éteint ~15 s après la fermeture de la fenêtre. Au-delà, vérifiez le gestionnaire des tâches ; le journal (`-Console` lors du build) indique la cause.
 
 **Le port est occupé** — Par défaut le port est aléatoire ; avec `-port`, choisissez-en un libre. Une seule instance tourne à la fois (un verrou l'assure) ; lancer le binaire une seconde fois ramène la fenêtre existante.
@@ -200,6 +202,7 @@ Entreprises et prestataires : une licence commerciale peut être convenue — co
 
 ## 📅 Historique des versions
 
+- **2.3** — Modèles personnalisés : figez un projet (charte graphique, logos, tournures) comme modèle réutilisable depuis la bibliothèque ; bouton d'ajout d'étape directement dans l'affiche ; publication automatisée des binaires (GitHub Actions).
 - **2.2** — Éditeur WYSIWYG complet : édition directe sur l'affiche, panneau contextuel déplaçable, placement libre des logos (glisser + guides + redimensionnement), réordonnancement des étapes et de la timeline au glisser, zoom de prévisualisation, alignement préviz/export garanti au pixel. Modèle de données v4.1.
 - **2.1** — Exports fiabilisés sur tous postes (lancement navigateur piloté, port DevTools explicite, stratégies de secours, diagnostics détaillés) ; cycle de vie par battement de cœur (fermeture automatique fiable) ; export HTML autonome ré-importable ; durcissement sécurité (contrôle Host, validation des uploads, sanitisation idempotente).
 - **2.0** — Réécriture en application native Go : binaire unique, interface embarquée, serveur strictement local, moteur de rendu unifié.

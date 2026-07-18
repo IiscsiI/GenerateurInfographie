@@ -3,7 +3,7 @@
     Generateur d'Infographie v2.0 (Go Edition)
     Editeur frontend - communique avec le serveur Go local
     Copyright (C) 2025 [Guillemin Pierre-Eric]
-    Licence : AGPL-3.0 (usage public/collectivites) - Commerciale (entreprises)
+    Licence : Libre non commerciale LULNC v1.0 (voir LICENSE) - Commerciale sur demande
 -->
 <html lang="fr">
 <head>
@@ -422,7 +422,7 @@
                 x-text="saveStatus === 'saved' ? 'Sauvegarde \u2713' : saveStatus === 'saving' ? 'Sauvegarde...' : 'Non sauvegarde'"></span>
             <div class="toolbar-separator"></div>
             <button class="btn btn-success btn-sm" @click="showExportModal = true">&#x1F4E5; Export</button>
-            <button class="btn btn-info btn-sm" @click="showTemplateLibrary = true" title="Bibliotheque de modeles">&#x1F4DA; Modeles</button>
+            <button class="btn btn-info btn-sm" @click="showTemplateLibrary = true; loadUserTemplates()" title="Bibliotheque de modeles">&#x1F4DA; Modeles</button>
             <button class="btn btn-danger btn-sm" @click="newProject()">&#x2795; Nouveau</button>
             <div class="toolbar-separator"></div>
             <button class="btn btn-sm" style="background:#17a2b8;color:white;" @click="showHelpModal = true" title="Aide">?</button>
@@ -1102,6 +1102,28 @@
                     </div>
                 </template>
             </div>
+            <div style="border-top:2px solid #eef1f4;margin-top:16px;padding-top:12px;">
+                <h4 style="text-align:center;color:var(--primary);margin-bottom:4px;">&#x1F4BE; Mes modeles</h4>
+                <p style="text-align:center;color:#6c757d;font-size:12px;margin-bottom:10px;">
+                    Figez votre projet (charte, logos, tournures) pour le reutiliser.
+                </p>
+                <div class="template-grid" x-show="userTemplates.length > 0">
+                    <template x-for="tpl in userTemplates" :key="tpl.id">
+                        <div class="template-card" @click="applyUserTemplate(tpl.id)" style="position:relative;">
+                            <button @click.stop="deleteUserTemplate(tpl.id, tpl.name)"
+                                    title="Supprimer ce modele"
+                                    style="position:absolute;top:6px;right:6px;border:0;background:#eef1f4;border-radius:6px;width:22px;height:22px;cursor:pointer;font-size:11px;">&#x2715;</button>
+                            <div class="template-card-icon" style="background:#2c3e50;">&#x1F4BE;</div>
+                            <div class="template-card-title" x-text="tpl.name"></div>
+                            <div class="template-card-desc">Modele personnalise</div>
+                        </div>
+                    </template>
+                </div>
+                <p x-show="userTemplates.length === 0" style="text-align:center;color:#95a5a6;font-size:12px;">
+                    Aucun modele personnalise pour le moment.
+                </p>
+                <button class="btn btn-success w-100 mt-15" @click="saveAsTemplate()">&#x1F4BE; Enregistrer le projet actuel comme modele</button>
+            </div>
             <button class="btn btn-danger w-100 mt-15" @click="showTemplateLibrary = false">Fermer</button>
         </div>
     </div>
@@ -1259,7 +1281,7 @@ function infographicApp() {
         };
         const project = (meta, content, theme, elements) => ({
             _version: '4.1',
-            metadata: Object.assign({ name: 'Nouveau Projet', author: '', organization: '', license: 'AGPL-3.0 / Commercial' }, meta),
+            metadata: Object.assign({ name: 'Nouveau Projet', author: '', organization: '', license: 'Libre non commerciale (LULNC)' }, meta),
             content,
             theme: { colors: theme, fontSize: 100, fontFamily: 'system' },
             elements: Object.assign({ logos: [], timeline: [], steps: [] }, elements)
@@ -1564,6 +1586,7 @@ function infographicApp() {
             return 4;
         },
         templateCatalog: TEMPLATE_CATALOG,
+        userTemplates: [],
         emojiSelectorTarget: null,
         emojiSelectorIndex: null,
         allStepsOpen: false,
@@ -1624,6 +1647,56 @@ function infographicApp() {
         // Le path (ex: "elements.steps.2.actions.1.text") cartographie l'element
         // clique vers le champ du formulaire : ouverture de section, scroll, flash.
         // ==========================================================================
+        // ------------------------------------------------------------------
+        // MODELES PERSONNALISES : le projet courant peut etre fige comme
+        // modele reutilisable (stocke cote application, logos inlines).
+        // ------------------------------------------------------------------
+        async loadUserTemplates() {
+            try {
+                const r = await fetch('/api/templates');
+                this.userTemplates = r.ok ? await r.json() : [];
+            } catch (e) { this.userTemplates = []; }
+        },
+        async saveAsTemplate(name) {
+            name = name || prompt('Nom du modele :', this.project.metadata.name || 'Mon modele');
+            if (!name || !name.trim()) return;
+            try {
+                const r = await fetch('/api/templates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name.trim(), project: this.project })
+                });
+                if (!r.ok) throw new Error((await r.json()).error || r.status);
+                await this.loadUserTemplates();
+                NotificationManager.success(`Modele "${name.trim()}" enregistre`);
+            } catch (e) {
+                NotificationManager.error('Enregistrement du modele impossible : ' + e.message);
+            }
+        },
+        async applyUserTemplate(id) {
+            try {
+                const r = await fetch('/api/templates/' + encodeURIComponent(id));
+                if (!r.ok) throw new Error('modele introuvable');
+                const tpl = await r.json();
+                this.pushUndo();
+                // Conserver l'identite du projet courant, remplacer le reste
+                tpl.metadata = Object.assign({}, tpl.metadata, { name: this.project.metadata.name });
+                this.project = tpl;
+                this.showTemplateLibrary = false;
+                this.clearSelection();
+                NotificationManager.success('Modele applique — Ctrl+Z pour annuler');
+            } catch (e) {
+                NotificationManager.error('Application du modele impossible : ' + e.message);
+            }
+        },
+        async deleteUserTemplate(id, name) {
+            if (!confirm(`Supprimer le modele "${name}" ?`)) return;
+            try {
+                await fetch('/api/templates/' + encodeURIComponent(id), { method: 'DELETE' });
+                await this.loadUserTemplates();
+            } catch (e) {}
+        },
+
         // Selection contextuelle : traduit le chemin data-edit en contexte type
         get sel() {
             const p = this.selPath;
@@ -1871,6 +1944,11 @@ function infographicApp() {
                     msg.edits.forEach(e => this.applyFrameEdit(e.path, e.value));
                 }
                 else if (msg.type === 'ig-move') this.applyFrameMove(msg.kind, msg.from, msg.to);
+                else if (msg.type === 'ig-add' && msg.kind === 'step') {
+                    this.addStep();
+                    this.selPath = 'elements.steps.' + (this.project.elements.steps.length - 1);
+                    this.$nextTick(() => this.pushSelectionToFrame());
+                }
                 else if (msg.type === 'ig-edit-end') {
                     this._syncMuted = false;
                     this.syncPreview(); // normalise le rendu apres edition

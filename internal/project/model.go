@@ -116,7 +116,7 @@ func DefaultProject() Project {
 		Metadata: Metadata{
 			Name:    "Nouveau Projet",
 			Author:  "",
-			License: "AGPL-3.0 / Commercial",
+			License: "Libre non commerciale (LULNC)",
 		},
 		Content: Content{
 			Title:            "CYBERATTAQUE DETECTEE",

@@ -22,7 +22,7 @@ import (
 
 // version est injectée au build via -ldflags "-X main.version=..." ;
 // la valeur ci-dessous sert de repli pour un build sans script (go build / go run).
-var version = "2.2.1"
+var version = "2.3.0"
 
 type lockInfo struct {
 	PID  int    `json:"pid"`

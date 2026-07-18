@@ -8,7 +8,7 @@
 # ==========================================================================
 set -euo pipefail
 
-VERSION="2.2.1"
+VERSION="2.3.0"
 TARGET="${1:-$(go env GOOS)}"
 VENDOR_DIR="web/editor/vendor"
 
