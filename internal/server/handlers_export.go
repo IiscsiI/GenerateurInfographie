@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
+	"path/filepath"
 	"time"
 
 	"infographic-generator/internal/browser"
@@ -50,6 +50,7 @@ func (s *Server) handleExportPNG(w http.ResponseWriter, r *http.Request) {
 		Orientation: req.Orientation,
 		DPI:         req.DPI,
 		BrowserPath: s.browser.Path,
+		ProfileDir:  filepath.Join(s.store.BaseDir, "export-profiles"),
 	}
 
 	data, err := browser.ExportPNG(r.Context(), cfg)
@@ -94,6 +95,7 @@ func (s *Server) handleExportPDF(w http.ResponseWriter, r *http.Request) {
 		Format:      req.Format,
 		Orientation: req.Orientation,
 		BrowserPath: s.browser.Path,
+		ProfileDir:  filepath.Join(s.store.BaseDir, "export-profiles"),
 	}
 
 	data, err := browser.ExportPDF(r.Context(), cfg)
@@ -125,7 +127,20 @@ func (s *Server) handleExportHTML(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	html := generateStandaloneHTML(p)
+	// ÉTAPE CLÉ : inliner les assets locaux en base64.
+	// Le fichier exporté doit s'afficher sur n'importe quel PC,
+	// sans dépendre du serveur local ni de ses fichiers d'assets.
+	inlined := project.InlineAssets(p, s.store)
+
+	projectJSON, err := web.MarshalProject(inlined)
+	if err != nil {
+		s.jsonError(w, 500, "Erreur de serialisation du projet")
+		return
+	}
+
+	// Le fichier autonome est généré à partir du MÊME template de rendu
+	// que la page /render : un seul moteur, zéro divergence preview/export.
+	html := web.StandaloneHTML(projectJSON, p.Content.Title, req.Orientation)
 
 	filename := fmt.Sprintf("infographie_%s_%s.html",
 		req.ProjectID, time.Now().Format("2006-01-02"))
@@ -133,6 +148,14 @@ func (s *Server) handleExportHTML(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 	w.Write([]byte(html))
+}
+
+// handleRenderFrame sert la page de rendu en mode "frame" (PROJECT = null) :
+// le rendu est alors piloté par l'éditeur via postMessage. C'est la préviz
+// interactive — même moteur que les captures et l'export, zéro divergence.
+func (s *Server) handleRenderFrame(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write([]byte(web.RenderTemplate("null")))
 }
 
 // handleRenderPage serves a read-only render of the infographic for chromedp capture.
@@ -158,26 +181,4 @@ func (s *Server) handleRenderPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Write([]byte(renderHTML))
-}
-
-// generateStandaloneHTML creates a self-contained HTML file with embedded data.
-func generateStandaloneHTML(p *project.Project) string {
-	projectJSON, _ := json.MarshalIndent(p, "    ", "  ")
-	css := web.RenderCSS()
-	html := web.BuildStaticInfographic(p)
-
-	var sb strings.Builder
-	sb.WriteString("<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n")
-	sb.WriteString("  <meta charset=\"UTF-8\">\n")
-	sb.WriteString(fmt.Sprintf("  <meta name=\"generator\" content=\"Generateur Infographie v2.0 (Go)\">\n"))
-	sb.WriteString(fmt.Sprintf("  <title>%s</title>\n", p.Content.Title))
-	sb.WriteString("  <style>\n")
-	sb.WriteString(css)
-	sb.WriteString("\n  </style>\n</head>\n<body>\n")
-	sb.WriteString(html)
-	sb.WriteString("\n  <script id=\"project-data\" type=\"application/json\">\n    ")
-	sb.WriteString(string(projectJSON))
-	sb.WriteString("\n  </script>\n</body>\n</html>")
-
-	return sb.String()
 }

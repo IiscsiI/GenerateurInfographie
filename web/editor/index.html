@@ -163,11 +163,6 @@
         .step-editor[data-category="continuity"] { border-left: 4px solid #27ae60 !important; }
 
         /* Empty state */
-        .preview-empty-state {
-            padding: 60px 30px; text-align: center; color: #adb5bd;
-            font-size: 1.1em; font-style: italic;
-        }
-        .preview-empty-state span { font-size: 3em; display: block; margin-bottom: 15px; opacity: 0.5; }
 
         /* Template library */
         .template-grid {
@@ -241,6 +236,72 @@
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* Preview panel scrolls both axes so the preview can overflow on large formats */
+
+        /* ==========================================================
+           PANNEAU DE PROPRIETES CONTEXTUEL (WYSIWYG)
+           Apparait a la selection d'un element dans la previz.
+           ========================================================== */
+        .ctx-panel {
+            position: fixed;
+            right: 26px;
+            top: 64px;
+            width: 292px;
+            max-height: calc(100vh - 90px);
+            overflow: auto;
+            background: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 14px 40px rgba(0,0,0,0.22);
+            padding: 14px 16px 16px;
+            z-index: 600;
+            font-size: 13px;
+        }
+        .ctx-panel h4 {
+            margin: 0 0 10px;
+            color: var(--primary);
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        .ctx-panel h4 .ctx-close {
+            border: 0; background: #eef1f4; border-radius: 6px;
+            width: 24px; height: 24px; cursor: pointer; font-size: 12px;
+        }
+        .ctx-panel label { font-size: 11px; font-weight: 600; color: #6c757d; display: block; margin: 8px 0 4px; }
+        .ctx-panel select, .ctx-panel input[type="text"], .ctx-panel input[type="url"], .ctx-panel input[type="number"] {
+            width: 100%; padding: 7px 9px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 13px;
+        }
+        .ctx-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+        .ctx-row .btn { flex: 1; min-width: 0; padding: 7px 6px; font-size: 12px; white-space: nowrap; }
+        .ctx-colors { display: flex; gap: 8px; margin-top: 6px; }
+        .ctx-colors > div { flex: 1; text-align: center; }
+        .ctx-colors .dot {
+            width: 100%; height: 30px; border-radius: 8px; cursor: pointer;
+            border: 2px solid #dee2e6; transition: transform .15s;
+        }
+        .ctx-colors .dot:hover { transform: scale(1.05); }
+        .ctx-colors span { font-size: 10px; color: #6c757d; }
+        .ctx-hint { font-size: 11px; color: #6c757d; line-height: 1.5; margin-top: 8px; }
+        .ctx-bigdot { width: 100%; height: 44px; border-radius: 10px; cursor: pointer; border: 2px solid #dee2e6; }
+
+        /* Previz WYSIWYG (iframe du moteur de rendu unique) */
+        #preview-frame {
+            display: block;
+            width: 100%;
+            height: calc(100vh - 90px);
+            border: 0;
+            border-radius: 12px;
+            background: transparent;
+        }
+
+        /* Mise en evidence du champ selectionne depuis la previz */
+        .ig-flash { animation: igflash 1.6s ease; }
+        @keyframes igflash {
+            0%, 55% { box-shadow: 0 0 0 3px var(--primary); background-color: #e3f2fd; }
+            100%    { box-shadow: none; }
+        }
+
         .preview-panel { flex: 1; overflow: auto; background: var(--light); padding: 20px; height: 100vh; }
 
         /* ================================================================
@@ -248,112 +309,18 @@
            Portrait: 900x1272 (1:sqrt(2)). Landscape: 1272x900 (sqrt(2):1).
            The preview-panel scrolls if the container is larger than the viewport.
            ================================================================ */
-        .preview-container {
-            margin: 0; border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-            overflow: hidden; transition: var(--transition);
-            display: flex; flex-direction: column;
-        }
         /* Wrapper that allows horizontal scroll to reveal overflowing preview */
-        .preview-scroll-wrapper {
-            display: flex; justify-content: flex-start;
-            min-width: max-content;
-        }
 
         /* Shared base */
-        .preview-header { color: white; text-align: center; position: relative; }
-        .preview-header::before { content: '\26A0\FE0F'; display: block; animation: pulse 2s infinite; }
-        .preview-header.hide-icon::before { display: none; }
         @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
-        .preview-header h1 { font-weight: 900; text-shadow: 2px 2px 4px rgba(0,0,0,0.4); letter-spacing: 2px; }
-        .preview-header p { opacity: 0.95; font-weight: 500; }
-        .preview-header .logo, .preview-footer .logo {
-            position: absolute; max-height: 80px; z-index: 10;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-        }
-        .preview-header .logo.top-left { left: 20px; top: 20px; }
-        .preview-header .logo.top-right { right: 20px; top: 20px; }
-        .preview-header .logo.top-center { left: 50%; top: 20px; transform: translateX(-50%); }
-        .preview-footer .logo.bottom-left { left: 20px; bottom: 15px; }
-        .preview-footer .logo.bottom-right { right: 20px; bottom: 15px; }
-        .preview-footer .logo.bottom-center { left: 50%; bottom: 15px; transform: translateX(-50%); }
 
-        .preview-timeline { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; }
-        .preview-timeline-item { color: white; border-radius: 30px; font-weight: 700; box-shadow: 0 3px 10px rgba(0,0,0,0.2); }
 
-        .preview-steps-grid { display: grid; flex: 1; align-content: start; }
-        .preview-step {
-            background: white; border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-            border-left: 6px solid; position: relative; transition: var(--transition);
-        }
-        .preview-step:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(0,0,0,0.12); }
-        .preview-step-number {
-            position: absolute; color: white; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-        .preview-step h3 { color: #2c3e50; font-weight: 800; line-height: 1.2; }
-        .preview-action-item {
-            border-radius: 10px; border-left: 4px solid; font-weight: 600;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.06); transition: var(--transition);
-        }
-        .preview-action-item:hover { transform: translateX(3px); box-shadow: 0 4px 10px rgba(0,0,0,0.10); }
-        .preview-emergency-contact {
-            color: white; border-radius: 12px; text-align: center;
-            font-weight: 700; box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-        }
-        .preview-footer { color: white; text-align: center; position: relative; margin-top: auto; }
 
         /* Portrait: fixed 900×1272 (ratio 1:√2, approximate A-size at 76 DPI) */
-        .preview-panel[data-orientation="portrait"] .preview-container {
-            width: 900px; height: 1272px;
-            flex-shrink: 0;
-        }
-        .preview-panel[data-orientation="portrait"] .preview-header { padding: 45px 30px; }
-        .preview-panel[data-orientation="portrait"] .preview-header::before { font-size: 70px; margin-bottom: 20px; }
-        .preview-panel[data-orientation="portrait"] .preview-header h1 { font-size: 2.8em; margin-bottom: 12px; }
-        .preview-panel[data-orientation="portrait"] .preview-header p { font-size: 1.2em; }
-        .preview-panel[data-orientation="portrait"] .preview-timeline { margin: 25px 0; padding: 0 20px; }
-        .preview-panel[data-orientation="portrait"] .preview-timeline-item { padding: 10px 22px; margin: 6px; font-size: 0.95em; }
-        .preview-panel[data-orientation="portrait"] .preview-steps-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 30px; padding: 40px;
-        }
-        .preview-panel[data-orientation="portrait"] .preview-step { padding: 30px; }
-        .preview-panel[data-orientation="portrait"] .preview-step-number { top: -18px; left: 22px; width: 44px; height: 44px; font-size: 1.3em; }
-        .preview-panel[data-orientation="portrait"] .preview-step-icon { font-size: 3.5em; margin-bottom: 20px; }
-        .preview-panel[data-orientation="portrait"] .preview-step h3 { font-size: 1.4em; margin-bottom: 16px; }
-        .preview-panel[data-orientation="portrait"] .preview-action-item { padding: 14px; margin: 12px 0; font-size: 0.95em; }
-        .preview-panel[data-orientation="portrait"] .preview-emergency-contact { padding: 25px; margin: 25px 40px; font-size: 1.1em; }
-        .preview-panel[data-orientation="portrait"] .preview-footer { padding: 35px 25px; line-height: 1.5; font-size: 1em; }
 
         /* Landscape: fixed 1272×900 (ratio √2:1) */
-        .preview-panel[data-orientation="landscape"] .preview-container {
-            width: 1272px; height: 900px;
-            flex-shrink: 0;
-        }
-        .preview-panel[data-orientation="landscape"] .preview-header { padding: 25px 30px; }
-        .preview-panel[data-orientation="landscape"] .preview-header::before { font-size: 45px; margin-bottom: 8px; }
-        .preview-panel[data-orientation="landscape"] .preview-header h1 { font-size: 2em; margin-bottom: 6px; }
-        .preview-panel[data-orientation="landscape"] .preview-header p { font-size: 1em; }
-        .preview-panel[data-orientation="landscape"] .preview-header .logo { max-height: 60px; }
-        .preview-panel[data-orientation="landscape"] .preview-timeline { margin: 12px 0; padding: 0 15px; }
-        .preview-panel[data-orientation="landscape"] .preview-timeline-item { padding: 6px 14px; margin: 3px; font-size: 0.8em; }
-        .preview-panel[data-orientation="landscape"] .preview-steps-grid { gap: 18px; padding: 20px 25px; }
-        .preview-panel[data-orientation="landscape"] .preview-step { padding: 18px 16px; border-radius: 12px; }
-        .preview-panel[data-orientation="landscape"] .preview-step-number { top: -14px; left: 14px; width: 34px; height: 34px; font-size: 1em; }
-        .preview-panel[data-orientation="landscape"] .preview-step-icon { font-size: 2em; margin-bottom: 10px; }
-        .preview-panel[data-orientation="landscape"] .preview-step h3 { font-size: 1em; margin-bottom: 8px; }
-        .preview-panel[data-orientation="landscape"] .preview-action-item { padding: 8px 10px; margin: 6px 0; font-size: 0.78em; border-left-width: 3px; }
-        .preview-panel[data-orientation="landscape"] .preview-emergency-contact { padding: 14px; margin: 12px 20px; font-size: 0.9em; border-radius: 8px; }
-        .preview-panel[data-orientation="landscape"] .preview-footer { padding: 18px 25px; font-size: 0.85em; line-height: 1.4; }
-        .preview-panel[data-orientation="landscape"] .preview-footer .logo { max-height: 45px; }
 
         /* Landscape grid column count: driven by previewCols CSS variable set from JS */
-        .preview-panel[data-orientation="landscape"] .preview-steps-grid {
-            grid-template-columns: repeat(var(--preview-cols, 2), 1fr);
-        }
 
         /* Orientation toggle button group */
         .orientation-toggle { display: inline-flex; border-radius: 6px; overflow: hidden; border: 1px solid #dee2e6; }
@@ -395,7 +362,6 @@
         @media (max-width: 1400px) {
             .app-container { flex-direction: column; }
             .editor-panel { width: 100%; max-height: 500px; }
-            .preview-steps-grid { grid-template-columns: 1fr; padding: 30px; }
         }
     </style>
 </head>
@@ -584,7 +550,7 @@
                 <label style="font-weight:600;font-size:13px;margin-bottom:8px;display:block;">Personnalisation</label>
                 <div class="color-grid">
                     <template x-for="(label, key) in colorLabels" :key="key">
-                        <div class="color-input-group">
+                        <div class="color-input-group" :data-color-key="key">
                             <div class="color-picker-btn"
                                  :style="`background-color: ${project.theme.colors[key]}`"
                                  @click="openGlobalColorPicker(key)"></div>
@@ -646,7 +612,7 @@
             </div>
             <div class="section-body" x-show="sections.timeline">
                 <template x-for="(item, index) in project.elements.timeline" :key="item.id">
-                    <div style="display:flex;gap:8px;margin-bottom:8px;">
+                    <div data-timeline-row style="display:flex;gap:8px;margin-bottom:8px;">
                         <select x-model="item.type" style="width:110px;">
                             <option value="item">&#x1F4CC; Element</option>
                             <option value="separator">&#x27A1;&#xFE0F; Separateur</option>
@@ -780,69 +746,185 @@
         </div>
     </div>
 
-    <!-- PREVIEW PANEL -->
+    <!-- ======================================================================
+         PREVIEW PANEL : previz WYSIWYG (iframe /render-frame)
+         Le rendu est delegue au moteur unique (web/render/index.html), le meme
+         que celui des exports PNG / PDF / HTML : ce qui s'affiche ici est
+         exactement ce qui sortira.
+         Un clic sur un element de l'affiche selectionne le champ correspondant
+         dans l'editeur (protocole postMessage : ig-render / ig-select).
+         ====================================================================== -->
     <div class="preview-panel" :style="`background:${project.theme.colors.background}`" :data-orientation="previewOrientation">
         <div class="text-center mb-15" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
             <h3 style="color:var(--primary);margin:0;">&#x1F441;&#xFE0F; Apercu en temps reel</h3>
+            <span style="font-size:12px;color:#6c757d;">&#x1F446; Cliquez un element de l'affiche pour l'editer</span>
             <div class="orientation-toggle" title="Apercu : orientation du document exporte">
                 <button :class="{active: previewOrientation === 'portrait'}" @click="previewOrientation = 'portrait'">&#x1F4C4; Portrait</button>
                 <button :class="{active: previewOrientation === 'landscape'}" @click="previewOrientation = 'landscape'">&#x1F5BC;&#xFE0F; Paysage</button>
             </div>
         </div>
-        <div id="preview-container" class="preview-container"
-             :style="`background:${project.theme.colors.contentBg};font-size:${project.theme.fontSize || 100}%;${project.theme.fontFamily && project.theme.fontFamily !== 'system' ? 'font-family:' + project.theme.fontFamily : ''};--preview-cols:${previewLandscapeCols}`">
-            <!-- Header -->
-            <div class="preview-header" :class="{'hide-icon': !project.content.showHeaderIcon}"
-                :style="`background:linear-gradient(135deg,${project.theme.colors.header},${adjustBrightness(project.theme.colors.header,-20)})`">
-                <template x-for="logo in project.elements.logos.filter(l=>l.position&&l.position.startsWith('top'))" :key="logo.id">
-                    <img :src="logo.file||logo.url" :class="`logo ${logo.position}`" :style="`max-width:${logo.size}px`" alt="Logo">
-                </template>
-                <h1 x-html="formatText(project.content.title)"></h1>
-                <p x-html="formatText(project.content.subtitle)"></p>
-            </div>
-            <!-- Timeline -->
-            <div class="preview-timeline">
-                <template x-for="item in project.elements.timeline" :key="item.id">
-                    <div class="preview-timeline-item"
-                        :style="item.type==='item' ? `background:linear-gradient(135deg,${project.theme.colors.timeline},${adjustBrightness(project.theme.colors.timeline,-15)})` : `background:transparent;color:${project.theme.colors.timeline};font-size:1.2em;`"
-                        x-text="item.text"></div>
-                </template>
-            </div>
-            <!-- Steps Grid -->
-            <template x-if="project.elements.steps.length === 0">
-                <div class="preview-empty-state">
-                    <span>&#x1F4CB;</span>
-                    Ajoutez des etapes dans l'editeur pour construire votre infographie
+        <!-- ==================================================================
+             PANNEAU DE PROPRIETES CONTEXTUEL
+             S'affiche a la selection d'un element dans l'affiche. Les textes
+             s'editent directement dans la previz ; tout le reste (couleurs,
+             categories, positions, structure) se pilote ici.
+             ================================================================== -->
+        <div class="ctx-panel" x-show="sel" x-transition.opacity @click.stop>
+            <template x-if="sel">
+                <div>
+                    <h4>
+                        <span x-text="sel.title"></span>
+                        <button class="ctx-close" @click="clearSelection()" title="Fermer">&#x2715;</button>
+                    </h4>
+
+                    <!-- ETAPE -->
+                    <template x-if="sel.kind === 'step'">
+                        <div>
+                            <label>Categorie</label>
+                            <select x-model="project.elements.steps[sel.si].category">
+                                <option value="immediate">&#x1F534; Immediat</option>
+                                <option value="management">&#x1F535; Gestion</option>
+                                <option value="communication">&#x1F7E0; Communication</option>
+                                <option value="continuity">&#x1F7E2; Continuite</option>
+                            </select>
+                            <label>Couleurs personnalisees</label>
+                            <div class="ctx-colors">
+                                <div>
+                                    <div class="dot" :style="`background:${getStepColor(project.elements.steps[sel.si],'border')}`"
+                                         @click="openStepColorPicker(sel.si,'border')"></div><span>Bordure</span>
+                                </div>
+                                <div>
+                                    <div class="dot" :style="`background:${getStepColor(project.elements.steps[sel.si],'background')}`"
+                                         @click="openStepColorPicker(sel.si,'background')"></div><span>Fond</span>
+                                </div>
+                                <div>
+                                    <div class="dot" :style="`background:${getStepColor(project.elements.steps[sel.si],'text')}`"
+                                         @click="openStepColorPicker(sel.si,'text')"></div><span>Texte</span>
+                                </div>
+                            </div>
+                            <div class="ctx-row" x-show="hasCustomStepColors(project.elements.steps[sel.si])">
+                                <button class="btn btn-sm" @click="resetStepColors(sel.si)">&#x21BA; Couleurs par defaut</button>
+                            </div>
+                            <div class="ctx-row">
+                                <button class="btn btn-success btn-sm" @click="addAction(sel.si)">&#x2795; Action</button>
+                                <button class="btn btn-info btn-sm" @click="duplicateStep(sel.si)">&#x1F4C4; Dupliquer</button>
+                            </div>
+                            <div class="ctx-row">
+                                <button class="btn btn-sm" :disabled="sel.si === 0" @click="moveSelStep(-1)">&#x2B06;&#xFE0F; Monter</button>
+                                <button class="btn btn-sm" :disabled="sel.si >= project.elements.steps.length - 1" @click="moveSelStep(1)">&#x2B07;&#xFE0F; Descendre</button>
+                            </div>
+                            <div class="ctx-row">
+                                <button class="btn btn-danger btn-sm" @click="removeStep(sel.si); clearSelection()">&#x1F5D1;&#xFE0F; Supprimer l'etape</button>
+                            </div>
+                            <p class="ctx-hint">&#x1F4A1; Cliquez le titre ou une action dans l'affiche pour les editer directement.</p>
+                        </div>
+                    </template>
+
+                    <!-- ACTION -->
+                    <template x-if="sel.kind === 'action'">
+                        <div>
+                            <label>Type d'action</label>
+                            <select x-model="project.elements.steps[sel.si].actions[sel.ai].type">
+                                <option value="critical">&#x1F534; Critique</option>
+                                <option value="important">&#x1F7E0; Important</option>
+                                <option value="info">&#x1F535; Information</option>
+                                <option value="success">&#x1F7E2; Succes</option>
+                            </select>
+                            <div class="ctx-row">
+                                <button class="btn btn-sm" :disabled="sel.ai === 0" @click="moveSelAction(-1)">&#x2B06;&#xFE0F;</button>
+                                <button class="btn btn-sm" :disabled="sel.ai >= project.elements.steps[sel.si].actions.length - 1" @click="moveSelAction(1)">&#x2B07;&#xFE0F;</button>
+                                <button class="btn btn-danger btn-sm" @click="removeAction(sel.si, sel.ai); clearSelection()">&#x1F5D1;&#xFE0F;</button>
+                            </div>
+                            <p class="ctx-hint">&#x1F4A1; Le texte s'edite directement dans l'affiche. Selectionnez des mots pour appliquer gras / italique / souligne.</p>
+                        </div>
+                    </template>
+
+                    <!-- ICONE D'ETAPE -->
+                    <template x-if="sel.kind === 'icon'">
+                        <div>
+                            <div class="ctx-row">
+                                <button class="btn btn-primary btn-sm" @click="openEmojiSelector('step', sel.si)">&#x1F600; Choisir un emoji</button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- TIMELINE -->
+                    <template x-if="sel.kind === 'timeline'">
+                        <div>
+                            <label>Type</label>
+                            <select x-model="project.elements.timeline[sel.ti].type">
+                                <option value="item">&#x1F4CC; Element</option>
+                                <option value="separator">&#x27A1;&#xFE0F; Separateur</option>
+                            </select>
+                            <div class="ctx-row" x-show="project.elements.timeline[sel.ti].type === 'separator'">
+                                <button class="btn btn-primary btn-sm" @click="openEmojiSelector('timeline', sel.ti)">&#x1F600; Choisir le symbole</button>
+                            </div>
+                            <div class="ctx-row">
+                                <button class="btn btn-sm" :disabled="sel.ti === 0" @click="moveSelTimeline(-1)">&#x2B05;&#xFE0F;</button>
+                                <button class="btn btn-sm" :disabled="sel.ti >= project.elements.timeline.length - 1" @click="moveSelTimeline(1)">&#x27A1;&#xFE0F;</button>
+                                <button class="btn btn-danger btn-sm" @click="project.elements.timeline.splice(sel.ti, 1); clearSelection()">&#x1F5D1;&#xFE0F;</button>
+                            </div>
+                            <p class="ctx-hint" x-show="project.elements.timeline[sel.ti].type === 'item'">&#x1F4A1; Le texte s'edite directement dans l'affiche.</p>
+                        </div>
+                    </template>
+
+                    <!-- LOGO -->
+                    <template x-if="sel.kind === 'logo'">
+                        <div>
+                            <label>Position</label>
+                            <select x-model="project.elements.logos[sel.li].position">
+                                <option value="top-left">&#x2196;&#xFE0F; Haut gauche</option>
+                                <option value="top-center">&#x2B06;&#xFE0F; Haut centre</option>
+                                <option value="top-right">&#x2197;&#xFE0F; Haut droite</option>
+                                <option value="bottom-left">&#x2199;&#xFE0F; Bas gauche</option>
+                                <option value="bottom-center">&#x2B07;&#xFE0F; Bas centre</option>
+                                <option value="bottom-right">&#x2198;&#xFE0F; Bas droite</option>
+                            </select>
+                            <label>Taille (px)</label>
+                            <input type="number" min="30" max="400" x-model.number="project.elements.logos[sel.li].size">
+                            <label>Remplacer l'image</label>
+                            <input type="file" accept="image/*" @change="handleLogoUpload($event, sel.li)" style="font-size:11px;">
+                            <label>Ou URL directe</label>
+                            <input type="url" x-model="project.elements.logos[sel.li].url" placeholder="https://...">
+                            <div class="ctx-row">
+                                <button class="btn btn-danger btn-sm" @click="removeLogo(sel.li); clearSelection()">&#x1F5D1;&#xFE0F; Supprimer le logo</button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- COULEUR DE ZONE -->
+                    <template x-if="sel.kind === 'color'">
+                        <div>
+                            <label x-text="`Couleur : ${sel.title}`"></label>
+                            <div class="ctx-bigdot" :style="`background:${project.theme.colors[sel.key]}`"
+                                 @click="openGlobalColorPicker(sel.key)"></div>
+                            <div class="ctx-row" x-show="sel.key === 'header'">
+                                <label style="display:flex;align-items:center;gap:8px;margin:4px 0 0;font-size:12px;color:#2c3e50;cursor:pointer;">
+                                    <input type="checkbox" x-model="project.content.showHeaderIcon" style="width:auto;">
+                                    Afficher l'icone &#x26A0;&#xFE0F; dans l'en-tete
+                                </label>
+                            </div>
+                            <p class="ctx-hint">&#x1F3A8; Les themes predefinis restent disponibles dans la section Couleurs du formulaire.</p>
+                        </div>
+                    </template>
+
+                    <!-- TEXTE DE CONTENU -->
+                    <template x-if="sel.kind === 'text'">
+                        <div>
+                            <p class="ctx-hint">&#x270F;&#xFE0F; Ce texte s'edite directement dans l'affiche.<br>
+                            Selectionnez des mots pour appliquer <strong>gras</strong>, <em>italique</em>, souligne ou barre via la barre flottante.<br>
+                            Entree insere un saut de ligne, Echap termine l'edition.</p>
+                        </div>
+                    </template>
+
+                    <div class="ctx-row" style="margin-top:12px;border-top:1px solid #eef1f4;padding-top:10px;">
+                        <button class="btn btn-sm" @click="focusPath(selPath)">&#x1F4DD; Ouvrir dans le formulaire</button>
+                    </div>
                 </div>
             </template>
-            <div class="preview-steps-grid" x-show="project.elements.steps.length > 0" :style="`background:${project.theme.colors.contentBg}`">
-                <template x-for="(step, si) in project.elements.steps" :key="step.id">
-                    <div class="preview-step" :style="`border-left-color:${getStepColor(step,'border')};background:${getStepColor(step,'background')};color:${getStepColor(step,'text')};`">
-                        <div class="preview-step-number" :style="`background:linear-gradient(135deg,${project.theme.colors.stepNumber},${adjustBrightness(project.theme.colors.stepNumber,-20)})`" x-text="si + 1"></div>
-                        <div class="preview-step-icon" x-text="step.icon"></div>
-                        <h3 x-text="step.title" :style="`color:${getStepColor(step,'text')};`"></h3>
-                        <div>
-                            <template x-for="action in step.actions" :key="action.id">
-                                <div class="preview-action-item"
-                                    :style="`border-left-color:${actionColor(action.type,'border')};background:${actionColor(action.type,'bg')};color:#2c3e50;`"
-                                    x-html="formatText(action.text)"></div>
-                            </template>
-                        </div>
-                    </div>
-                </template>
-            </div>
-            <!-- Emergency -->
-            <div class="preview-emergency-contact"
-                :style="`background:linear-gradient(135deg,${project.theme.colors.emergency},${adjustBrightness(project.theme.colors.emergency,-20)})`"
-                x-html="formatText(project.content.emergencyMessage)"></div>
-            <!-- Footer -->
-            <div class="preview-footer" :style="`background:linear-gradient(135deg,${project.theme.colors.footer},${adjustBrightness(project.theme.colors.footer,-15)})`">
-                <template x-for="logo in project.elements.logos.filter(l=>l.position&&l.position.startsWith('bottom'))" :key="logo.id">
-                    <img :src="logo.file||logo.url" :class="`logo ${logo.position}`" :style="`max-width:${logo.size}px`" alt="Logo">
-                </template>
-                <div x-html="formatText(project.content.footerMessage)"></div>
-            </div>
         </div>
+
+        <iframe id="preview-frame" src="/render-frame" title="Apercu de l'infographie" @load="syncPreview()"></iframe>
     </div>
 
     <!-- EXPORT MODAL -->
@@ -1482,6 +1564,10 @@ function infographicApp() {
             steps: true
         },
 
+        // WYSIWYG : selection courante dans la previz + silencieux de resync
+        selPath: null,
+        _syncMuted: false,
+
         // Save status
         saveStatus: 'saved',
 
@@ -1507,6 +1593,178 @@ function infographicApp() {
             "\uD83C\uDF10","\uD83D\uDCA0","\uD83D\uDD78\uFE0F","\u2601\uFE0F","\uD83D\uDCF6","\uD83D\uDD17"
         ],
 
+        // ==========================================================================
+        // PREVIZ WYSIWYG : synchronisation avec l'iframe du moteur de rendu unique
+        // --------------------------------------------------------------------------
+        // Editeur -> frame : { type:'ig-render', project, orientation }
+        // Frame -> editeur : { type:'ig-select', path } (clic sur un element)
+        // Le path (ex: "elements.steps.2.actions.1.text") cartographie l'element
+        // clique vers le champ du formulaire : ouverture de section, scroll, flash.
+        // ==========================================================================
+        // Selection contextuelle : traduit le chemin data-edit en contexte type
+        get sel() {
+            const p = this.selPath;
+            if (!p) return null;
+            const t = p.split('.');
+            const steps = this.project.elements.steps;
+            if (t[0] === 'theme') {
+                const key = t[2];
+                if (!(key in this.project.theme.colors)) return null;
+                return { kind: 'color', key, title: this.colorLabels[key] || key };
+            }
+            if (t[0] === 'content') {
+                const labels = { title: 'Titre', subtitle: 'Sous-titre', emergencyMessage: "Message d'urgence", footerMessage: 'Pied de page' };
+                return { kind: 'text', field: t[1], title: labels[t[1]] || 'Texte' };
+            }
+            if (t[1] === 'steps') {
+                const si = parseInt(t[2], 10);
+                if (!(steps && steps[si])) return null;
+                if (t[3] === 'actions') {
+                    const ai = parseInt(t[4], 10);
+                    if (!steps[si].actions[ai]) return null;
+                    return { kind: 'action', si, ai, title: `Action ${ai + 1} — Etape ${si + 1}` };
+                }
+                if (t[3] === 'icon') return { kind: 'icon', si, title: `Icone — Etape ${si + 1}` };
+                return { kind: 'step', si, title: `Etape ${si + 1}` };
+            }
+            if (t[1] === 'timeline') {
+                const ti = parseInt(t[2], 10);
+                if (!this.project.elements.timeline[ti]) return null;
+                return { kind: 'timeline', ti, title: `Timeline — element ${ti + 1}` };
+            }
+            if (t[1] === 'logos') {
+                const li = parseInt(t[2], 10);
+                if (!this.project.elements.logos[li]) return null;
+                return { kind: 'logo', li, title: `Logo ${li + 1}` };
+            }
+            return null;
+        },
+
+        clearSelection() {
+            this.selPath = null;
+            this.pushSelectionToFrame();
+        },
+        pushSelectionToFrame() {
+            const frame = document.getElementById('preview-frame');
+            if (frame && frame.contentWindow) {
+                frame.contentWindow.postMessage({ type: 'ig-select-path', path: this.selPath }, window.location.origin);
+            }
+        },
+
+        // Deplacements depuis le panneau (la selection suit l'element)
+        moveSelStep(dir) {
+            const s = this.sel; if (!s || s.kind !== 'step') return;
+            const j = s.si + dir;
+            if (j < 0 || j >= this.project.elements.steps.length) return;
+            this.reorderSteps(s.si, j);
+            this.selPath = `elements.steps.${j}`;
+            this.$nextTick(() => this.pushSelectionToFrame());
+        },
+        moveSelAction(dir) {
+            const s = this.sel; if (!s || s.kind !== 'action') return;
+            const actions = this.project.elements.steps[s.si].actions;
+            const j = s.ai + dir;
+            if (j < 0 || j >= actions.length) return;
+            const [moved] = actions.splice(s.ai, 1);
+            actions.splice(j, 0, moved);
+            this.selPath = `elements.steps.${s.si}.actions.${j}.text`;
+            this.$nextTick(() => this.pushSelectionToFrame());
+        },
+        moveSelTimeline(dir) {
+            const s = this.sel; if (!s || s.kind !== 'timeline') return;
+            const tl = this.project.elements.timeline;
+            const j = s.ti + dir;
+            if (j < 0 || j >= tl.length) return;
+            const [moved] = tl.splice(s.ti, 1);
+            tl.splice(j, 0, moved);
+            this.selPath = `elements.timeline.${j}`;
+            this.$nextTick(() => this.pushSelectionToFrame());
+        },
+
+        // Edition in-place : application d'une valeur par chemin pointe
+        applyFrameEdit(path, value) {
+            if (typeof path !== 'string' || typeof value !== 'string') return;
+            const t = path.split('.');
+            let o = this.project;
+            for (let i = 0; i < t.length - 1; i++) {
+                o = o[t[i]];
+                if (o === undefined || o === null) return;
+            }
+            o[t[t.length - 1]] = value;
+        },
+
+        syncPreview() {
+            const frame = document.getElementById('preview-frame');
+            if (!frame || !frame.contentWindow) return;
+            // JSON round-trip : les Proxy Alpine ne sont pas clonables par postMessage
+            frame.contentWindow.postMessage({
+                type: 'ig-render',
+                project: JSON.parse(JSON.stringify(this.project)),
+                orientation: this.previewOrientation
+            }, window.location.origin);
+        },
+
+        focusPath(path) {
+            if (!path) return;
+            const parts = path.split('.');
+
+            // 1. Ouvrir la section concernee
+            let section = 'content';
+            if (path.startsWith('theme.')) section = 'colors';
+            else if (path.startsWith('elements.logos')) section = 'logos';
+            else if (path.startsWith('elements.timeline')) section = 'timeline';
+            else if (path.startsWith('elements.steps')) section = 'steps';
+            this.sections[section] = true;
+
+            // 2. Localiser le champ et le mettre en evidence
+            this.$nextTick(() => {
+                let el = null;
+                if (path === 'content.title') el = document.getElementById('ct-title');
+                else if (path === 'content.subtitle') el = document.getElementById('ct-subtitle');
+                else if (path === 'content.emergencyMessage') el = document.getElementById('ct-emergency');
+                else if (path === 'content.footerMessage') el = document.getElementById('ct-footer');
+                else if (parts[0] === 'theme') {
+                    el = document.querySelector(`[data-color-key="${parts[2]}"]`);
+                }
+                else if (parts[1] === 'steps') {
+                    const si = parseInt(parts[2], 10);
+                    const cont = this.$refs.stepsContainer;
+                    const card = cont ? cont.querySelectorAll(':scope > .step-wrapper')[si] : null;
+                    if (card) {
+                        const det = card.querySelector('details');
+                        if (det) det.open = true;
+                    }
+                    if (parts[3] === 'actions') {
+                        const ai = parseInt(parts[4], 10);
+                        el = document.getElementById(`action-textarea-${si}-${ai}`) || card;
+                    } else {
+                        el = card;
+                    }
+                }
+                else if (parts[1] === 'timeline') {
+                    const ti = parseInt(parts[2], 10);
+                    el = document.querySelectorAll('[data-timeline-row]')[ti] || null;
+                }
+                else if (parts[1] === 'logos') {
+                    const li = parseInt(parts[2], 10);
+                    el = document.querySelectorAll('.logo-item')[li] || null;
+                }
+                this.flashField(el);
+            });
+        },
+
+        flashField(el) {
+            if (!el) return;
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.remove('ig-flash');
+            void el.offsetWidth; // reflow : permet de rejouer l'animation
+            el.classList.add('ig-flash');
+            if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
+                try { el.focus({ preventScroll: true }); } catch (e) {}
+            }
+            setTimeout(() => el.classList.remove('ig-flash'), 1700);
+        },
+
         // ============================================
         // INIT
         // ============================================
@@ -1519,6 +1777,34 @@ function infographicApp() {
             }
 
             this.$nextTick(() => { this.initAllSortables(); });
+
+            // Battement de coeur : signale au serveur que la fenetre est
+            // ouverte. 15s de silence cote serveur = extinction propre de
+            // l'application (fiable meme quand Edge delegue ses processus).
+            const beat = () => fetch('/api/heartbeat', { method: 'POST', keepalive: true }).catch(() => {});
+            beat();
+            setInterval(beat, 3000);
+            window.addEventListener('pagehide', () => {
+                try { navigator.sendBeacon('/api/heartbeat'); } catch (e) {}
+            });
+
+            // Previz WYSIWYG : messages de l'iframe de rendu
+            window.addEventListener('message', (ev) => {
+                if (ev.origin !== window.location.origin) return;
+                const msg = ev.data;
+                if (!msg || typeof msg !== 'object') return;
+                if (msg.type === 'ig-ready') this.syncPreview();
+                else if (msg.type === 'ig-select') this.selPath = msg.path || null;
+                else if (msg.type === 'ig-edit-start') this._syncMuted = true;
+                else if (msg.type === 'ig-edit') this.applyFrameEdit(msg.path, msg.value);
+                else if (msg.type === 'ig-edit-end') {
+                    this._syncMuted = false;
+                    this.syncPreview(); // normalise le rendu apres edition
+                }
+            });
+            // Filet de securite si le signal ig-ready s'est perdu au demarrage
+            setTimeout(() => this.syncPreview(), 500);
+            this.$watch('previewOrientation', () => this.syncPreview());
 
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
@@ -1563,6 +1849,9 @@ function infographicApp() {
 
             // Watch for changes - debounced autosave + undo snapshots
             this.$watch('project', () => {
+                // Pas de re-rendu pendant la frappe in-place (le texte est deja
+                // a l'ecran dans la frame) : le curseur serait detruit.
+                if (!this._syncMuted) this.syncPreview();
                 if (this._undoLock) return;
                 this.saveStatus = 'unsaved';
                 clearTimeout(this.saveTimer);

@@ -33,7 +33,10 @@ func OpenKioskAndWait(browserPath, url, dataDir string) bool {
 		"--disable-extensions",
 		"--disable-sync",
 		"--disable-translate",
-		"--disable-features=TranslateUI,EdgeCollections,msEdgeSidebarV2",
+		// msFirstRunExperience / WelcomePage : Edge ouvre sinon une fenêtre
+		// d'accueil séparée au premier lancement d'un profil, malgré
+		// --no-first-run.
+		"--disable-features=TranslateUI,EdgeCollections,msEdgeSidebarV2,msFirstRunExperience,msEdgeWelcomePage,msSeamlessWebToBrowserSignIn",
 		"--disable-client-side-phishing-detection",
 		"--disable-component-update",
 		"--disable-infobars",

@@ -190,6 +190,12 @@ func sanitizeStyle(s string) string {
 	return strings.Join(out, ";")
 }
 
+// textEscaper neutralise uniquement les chevrons orphelins dans le texte.
+// SURTOUT PAS html.EscapeString ici : celui-ci échappe aussi & ' " — la
+// sanitisation ne serait plus idempotente et chaque sauvegarde ou import
+// ajouterait un niveau d'échappement (l'étape -> l&#39;étape -> l&amp;#39;étape...).
+var textEscaper = strings.NewReplacer("<", "&lt;", ">", "&gt;")
+
 func escapeText(s string) string {
-	return html.EscapeString(s)
+	return textEscaper.Replace(s)
 }

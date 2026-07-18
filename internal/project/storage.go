@@ -123,7 +123,7 @@ func (s *Storage) Save(id string, p *Project) (string, error) {
 
 	p.Version = "4.0"
 	p.Generated = time.Now().Format(time.RFC3339)
-	p.Generator = "Generateur Infographie v2.0 (Go)"
+	p.Generator = "Generateur Infographie v2.1 (Go)"
 
 	data, err := json.MarshalIndent(p, "", "  ")
 	if err != nil {

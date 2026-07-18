@@ -119,24 +119,99 @@
         body.landscape .preview-emergency-contact { padding: 14px; margin: 12px 20px; font-size: 0.9em; border-radius: 8px; }
         body.landscape .preview-footer { padding: 18px 25px; font-size: 0.85em; line-height: 1.4; }
         body.landscape .preview-footer .logo { max-height: 45px; }
+
+        /* ============================================
+           FRAME MODE (préviz interactive dans l'éditeur)
+           ============================================ */
+        body.frame-mode [data-edit] { cursor: pointer; }
+        body.frame-mode [data-edit]:hover {
+            outline: 2px dashed rgba(0, 86, 179, 0.65);
+            outline-offset: 2px;
+        }
+        body.frame-mode [data-edit].ig-selected {
+            outline: 3px solid #0056b3;
+            outline-offset: 2px;
+        }
+        body.frame-mode [data-edit].ig-editing {
+            outline: 3px solid #27ae60;
+            outline-offset: 2px;
+            cursor: text;
+            min-width: 40px;
+            min-height: 1em;
+        }
+        body.frame-mode [data-edit].ig-editing:hover { outline-color: #27ae60; }
+
+        /* Barre de style flottante (édition rich text) */
+        #ig-toolbar {
+            position: fixed;
+            display: none;
+            z-index: 9999;
+            background: #2c3e50;
+            border-radius: 8px;
+            padding: 4px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+            gap: 2px;
+        }
+        #ig-toolbar button {
+            border: 0;
+            background: transparent;
+            color: #fff;
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        #ig-toolbar button:hover { background: rgba(255,255,255,0.18); }
+        #ig-toolbar button.b { font-weight: 900; }
+        #ig-toolbar button.i { font-style: italic; }
+        #ig-toolbar button.u { text-decoration: underline; }
+        #ig-toolbar button.s { text-decoration: line-through; }
     </style>
 </head>
 <body>
     <div id="render-root"></div>
+<body>
+    <div id="render-root"></div>
     <div id="infographic-ready" style="display:none;"></div>
+    <div id="ig-toolbar">
+        <button class="b" data-cmd="bold" title="Gras (Ctrl+B)">B</button>
+        <button class="i" data-cmd="italic" title="Italique (Ctrl+I)">I</button>
+        <button class="u" data-cmd="underline" title="Souligne (Ctrl+U)">U</button>
+        <button class="s" data-cmd="strikeThrough" title="Barre">S</button>
+    </div>
 
     <script>
+        /* ==========================================================================
+           MOTEUR DE RENDU UNIQUE
+           --------------------------------------------------------------------------
+           Cette page est utilisée dans TROIS contextes, sans divergence possible :
+             1. /render/{id}       : capture chromedp (exports PNG / PDF)
+             2. export HTML        : fichier autonome auto-rendu (PROJECT embarqué)
+             3. mode "frame"       : préviz interactive de l'éditeur (PROJECT null,
+                                     rendu piloté par postMessage, socle WYSIWYG)
+
+           Chaque élément éditable porte un attribut data-edit="chemin.dans.le.projet"
+           qui cartographie le DOM vers le modèle de données. En mode frame, un clic
+           envoie ce chemin à l'éditeur (sélection) ; c'est la fondation de
+           l'édition in-place à venir.
+           ========================================================================== */
+
         const PROJECT = "%%PROJECT_DATA%%";
 
-        // Read layout params from URL
+        // Paramètres d'affichage (URL en priorité, puis valeur embarquée à l'export)
         const params = new URLSearchParams(window.location.search);
-        const orientation = params.get('orientation') || 'portrait';
-        const stepCount = (PROJECT.elements && PROJECT.elements.steps) ? PROJECT.elements.steps.length : 4;
+        let orientation = params.get('orientation')
+            || window.EXPORT_ORIENTATION
+            || 'portrait';
+        const fitMode = params.get('fit') === '1';       // mise à l'échelle capture
+        const frameMode = (PROJECT === null);            // préviz éditeur
 
-        // Apply orientation class to body
-        document.body.className = orientation;
+        let currentProject = frameMode ? null : PROJECT;
+        let selectedPath = null;
 
-        // Landscape columns: 1→1, 2→2, 3-9→3, >9→4.
+        // Colonnes en paysage : 1→1, 2→2, 3-9→3, >9→4.
         function getLandscapeCols(n) {
             if (n <= 1) return 1;
             if (n === 2) return 2;
@@ -144,14 +219,19 @@
             return 4;
         }
 
-        if (orientation === 'landscape') {
-            const cols = getLandscapeCols(stepCount);
-            const style = document.createElement('style');
-            style.textContent = `body.landscape .preview-steps-grid { grid-template-columns: repeat(${cols}, 1fr); }`;
-            document.head.appendChild(style);
+        const dynStyle = document.createElement('style');
+        document.head.appendChild(dynStyle);
+
+        function applyOrientation() {
+            document.body.className = orientation + (frameMode ? ' frame-mode' : '');
+            const steps = (currentProject && currentProject.elements && currentProject.elements.steps)
+                ? currentProject.elements.steps.length : 4;
+            dynStyle.textContent = (orientation === 'landscape')
+                ? `body.landscape .preview-steps-grid { grid-template-columns: repeat(${getLandscapeCols(steps)}, 1fr); }`
+                : '';
         }
 
-        // --- Color helpers ---
+        /* --- Résolution des couleurs (miroir strict de l'éditeur) --- */
         const categoryPresets = {
             immediate:     { border: '#e74c3c', background: '#ffffff', text: '#2c3e50' },
             management:    { border: '#0056b3', background: '#ffffff', text: '#2c3e50' },
@@ -190,7 +270,7 @@
             return d.innerHTML;
         }
 
-        // Sanitizer - same whitelist as editor (defense in depth)
+        /* --- Sanitizer : même liste blanche que l'éditeur et le serveur --- */
         const ALLOWED_RENDER_TAGS = {
             STRONG:[], B:[], EM:[], I:[], U:[], S:[], STRIKE:[], BR:[],
             P:['style'], DIV:['style'], SPAN:['style'],
@@ -249,34 +329,51 @@
             return out.join(';');
         }
 
+        /* --- Attribut de sélection (cartographie DOM -> modèle) --- */
+        function editAttr(path) {
+            // Émis uniquement en mode frame : les exports restent du HTML pur.
+            return frameMode ? ` data-edit="${path}"` : '';
+        }
+
+        /* ==========================================================================
+           RENDU
+           ========================================================================== */
         function render() {
-            const p = PROJECT;
+            const p = currentProject;
+            if (!p) return;
             const c = p.theme.colors;
             const fontSize = (p.theme && p.theme.fontSize) ? p.theme.fontSize : 100;
             const fontFamily = (p.theme && p.theme.fontFamily && p.theme.fontFamily !== 'system') ? p.theme.fontFamily : '';
             let html = '';
 
+            document.title = (p.content && p.content.title) ? p.content.title : 'Infographie';
+            // Le fond de page = couleur de fond du projet (visible autour de
+            // l'affiche et dans les marges des captures au ratio papier).
+            document.body.style.background = c.background || '#f8f9fa';
+
+            applyOrientation();
+
             const headerClass = p.content.showHeaderIcon ? 'preview-header' : 'preview-header hide-icon';
             const fontStyle = fontFamily ? `;font-family:${fontFamily}` : '';
             html += `<div class="preview-container" style="background:${c.contentBg};font-size:${fontSize}%${fontStyle}">`;
-            html += `<div class="${headerClass}" style="background:linear-gradient(135deg,${c.header},${adjustBrightness(c.header,-20)})">`;
+            html += `<div class="${headerClass}"${editAttr('theme.colors.header')} style="background:linear-gradient(135deg,${c.header},${adjustBrightness(c.header,-20)})">`;
 
-            (p.elements.logos || []).forEach(logo => {
+            (p.elements.logos || []).forEach((logo, i) => {
                 const src = logo.file || logo.url;
                 if (src && logo.position && logo.position.startsWith('top')) {
-                    html += `<img src="${esc(src)}" class="logo ${logo.position}" style="max-width:${logo.size}px" alt="Logo">`;
+                    html += `<img src="${esc(src)}" class="logo ${logo.position}"${editAttr('elements.logos.' + i)} style="max-width:${logo.size}px" alt="Logo">`;
                 }
             });
-            html += `<h1>${sanitizeRenderHTML(p.content.title)}</h1>`;
-            html += `<p>${sanitizeRenderHTML(p.content.subtitle)}</p></div>`;
+            html += `<h1${editAttr('content.title')}>${sanitizeRenderHTML(p.content.title)}</h1>`;
+            html += `<p${editAttr('content.subtitle')}>${sanitizeRenderHTML(p.content.subtitle)}</p></div>`;
 
             if (p.elements.timeline && p.elements.timeline.length) {
-                html += '<div class="preview-timeline">';
-                p.elements.timeline.forEach(item => {
+                html += `<div class="preview-timeline"${editAttr('theme.colors.timeline')}>`;
+                p.elements.timeline.forEach((item, i) => {
                     if (item.type === 'item') {
-                        html += `<div class="preview-timeline-item" style="background:linear-gradient(135deg,${c.timeline},${adjustBrightness(c.timeline,-15)})">${esc(item.text)}</div>`;
+                        html += `<div class="preview-timeline-item"${editAttr('elements.timeline.' + i)} style="background:linear-gradient(135deg,${c.timeline},${adjustBrightness(c.timeline,-15)})">${esc(item.text)}</div>`;
                     } else {
-                        html += `<div class="preview-timeline-item" style="background:transparent;color:${c.timeline};font-size:1.2em;">${esc(item.text)}</div>`;
+                        html += `<div class="preview-timeline-item"${editAttr('elements.timeline.' + i)} style="background:transparent;color:${c.timeline};font-size:1.2em;">${esc(item.text)}</div>`;
                     }
                 });
                 html += '</div>';
@@ -287,40 +384,353 @@
                 const bc = getStepColor(step, 'border');
                 const bg = getStepColor(step, 'background');
                 const tc = getStepColor(step, 'text');
-                html += `<div class="preview-step" style="border-left-color:${bc};background:${bg};color:${tc}">`;
+                html += `<div class="preview-step"${editAttr('elements.steps.' + index)} style="border-left-color:${bc};background:${bg};color:${tc}">`;
                 html += `<div class="preview-step-number" style="background:linear-gradient(135deg,${c.stepNumber},${adjustBrightness(c.stepNumber,-20)})">${index + 1}</div>`;
-                html += `<div class="preview-step-icon">${step.icon}</div>`;
-                html += `<h3 style="color:${tc}">${esc(step.title)}</h3><div>`;
-                (step.actions || []).forEach(action => {
+                html += `<div class="preview-step-icon"${editAttr('elements.steps.' + index + '.icon')}>${esc(step.icon)}</div>`;
+                html += `<h3${editAttr('elements.steps.' + index + '.title')} style="color:${tc}">${esc(step.title)}</h3><div>`;
+                (step.actions || []).forEach((action, j) => {
                     const ab = getActionColor(action, 'border');
                     const abg = getActionColor(action, 'background');
-                    html += `<div class="preview-action-item" style="border-left-color:${ab};background:${abg};color:#2c3e50">${sanitizeRenderHTML(action.text)}</div>`;
+                    html += `<div class="preview-action-item"${editAttr('elements.steps.' + index + '.actions.' + j + '.text')} style="border-left-color:${ab};background:${abg};color:#2c3e50">${sanitizeRenderHTML(action.text)}</div>`;
                 });
                 html += '</div></div>';
             });
             html += '</div>';
 
             if (p.content.emergencyMessage) {
-                html += `<div class="preview-emergency-contact" style="background:linear-gradient(135deg,${c.emergency},${adjustBrightness(c.emergency,-20)})">${sanitizeRenderHTML(p.content.emergencyMessage)}</div>`;
+                html += `<div class="preview-emergency-contact"${editAttr('content.emergencyMessage')} style="background:linear-gradient(135deg,${c.emergency},${adjustBrightness(c.emergency,-20)})">${sanitizeRenderHTML(p.content.emergencyMessage)}</div>`;
             }
 
-            html += `<div class="preview-footer" style="background:linear-gradient(135deg,${c.footer},${adjustBrightness(c.footer,-15)})">`;
-            (p.elements.logos || []).forEach(logo => {
+            html += `<div class="preview-footer"${editAttr('theme.colors.footer')} style="background:linear-gradient(135deg,${c.footer},${adjustBrightness(c.footer,-15)})">`;
+            (p.elements.logos || []).forEach((logo, i) => {
                 const src = logo.file || logo.url;
                 if (src && logo.position && logo.position.startsWith('bottom')) {
-                    html += `<img src="${esc(src)}" class="logo ${logo.position}" style="max-width:${logo.size}px" alt="Logo">`;
+                    html += `<img src="${esc(src)}" class="logo ${logo.position}"${editAttr('elements.logos.' + i)} style="max-width:${logo.size}px" alt="Logo">`;
                 }
             });
-            html += `<div>${sanitizeRenderHTML(p.content.footerMessage)}</div>`;
+            html += `<div${editAttr('content.footerMessage')}>${sanitizeRenderHTML(p.content.footerMessage)}</div>`;
             html += '</div></div>';
 
             document.getElementById('render-root').innerHTML = html;
+            restoreSelection();
         }
 
-        try { render(); } catch(e) {
-            document.getElementById('render-root').innerHTML = '<div style="padding:40px;color:red;">RENDER ERROR: ' + e.message + '</div>';
+        /* ==========================================================================
+           ANTI-TRONCATURE (captures PNG/PDF au ratio papier : ?fit=1)
+           --------------------------------------------------------------------------
+           Le viewport de capture est calé sur le ratio exact du papier. Si le
+           contenu est plus haut que le viewport, il serait purement coupé.
+           Ici : mesure après chargement des images, puis mise à l'échelle
+           uniforme pour que TOUT le contenu tienne dans la capture.
+           ========================================================================== */
+        function waitForImages(timeoutMs) {
+            const imgs = Array.from(document.images);
+            if (!imgs.length) return Promise.resolve();
+            return Promise.all(imgs.map(img => img.complete
+                ? Promise.resolve()
+                : new Promise(res => {
+                    img.addEventListener('load', res, { once: true });
+                    img.addEventListener('error', res, { once: true });
+                    setTimeout(res, timeoutMs);
+                })
+            ));
         }
-        setTimeout(() => { document.getElementById('infographic-ready').style.display = 'block'; }, 300);
+
+        function applyFit() {
+            if (!fitMode) return;
+            const cont = document.querySelector('.preview-container');
+            if (!cont) return;
+            // Réinitialiser une éventuelle passe précédente
+            cont.style.transform = '';
+            cont.style.marginTop = '';
+            const vw = window.innerWidth, vh = window.innerHeight;
+            const rect = cont.getBoundingClientRect();
+            const cw = rect.width, ch = rect.height;
+            const s = Math.min(1, vw / cw, vh / ch);
+            if (s < 1) {
+                cont.style.transformOrigin = 'top center';
+                cont.style.transform = `scale(${s})`;
+            }
+            // Centrage vertical du visuel dans la capture
+            const visualH = ch * s;
+            const offset = Math.max(0, (vh - visualH) / 2);
+            if (offset > 0) cont.style.marginTop = offset + 'px';
+
+            // Le transform est purement visuel : la boîte de layout garde sa
+            // hauteur d'origine. Sans bornage, printToPDF paginerait sur cette
+            // hauteur fantôme (page 2 vide). On clippe le document au viewport.
+            // NB : overflow doit être posé sur html ET body. Posé sur body seul,
+            // la spec CSS le propage au viewport et body redevient "visible" —
+            // l'impression paginerait alors sur le débordement.
+            document.documentElement.style.height = vh + 'px';
+            document.documentElement.style.overflow = 'hidden';
+            document.body.style.height = vh + 'px';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function signalReady() {
+            // Marqueur attendu par chromedp : bloc 1x1 réellement "visible".
+            const m = document.getElementById('infographic-ready');
+            m.style.cssText = 'display:block;position:fixed;left:0;top:0;width:1px;height:1px;opacity:0.01;';
+        }
+
+        /* ==========================================================================
+           MODE FRAME : protocole postMessage avec l'éditeur (socle WYSIWYG)
+           --------------------------------------------------------------------------
+           Éditeur -> frame : { type:'ig-render', project, orientation }
+           Frame -> éditeur : { type:'ig-ready' }
+                              { type:'ig-select', path }   (clic sur un élément)
+           ========================================================================== */
+        function restoreSelection() {
+            if (!frameMode || !selectedPath) return;
+            const el = document.querySelector(`[data-edit="${CSS.escape(selectedPath)}"]`);
+            if (el) el.classList.add('ig-selected');
+        }
+
+        /* ------------------------------------------------------------------
+           ÉDITION IN-PLACE (mode frame uniquement)
+           ------------------------------------------------------------------
+           Chaque chemin éditable a une "nature" :
+             - rich  : HTML limité (gras, italique... via liste blanche),
+                       sauts de ligne <br> <-> \n dans le modèle
+             - plain : texte brut mono-ligne
+             - select: sélection seule (le panneau contextuel de l'éditeur
+                       prend le relais : couleurs, positions, emoji...)
+           ------------------------------------------------------------------ */
+        function pathKind(path) {
+            if (/^content\.(title|subtitle|emergencyMessage|footerMessage)$/.test(path)) return 'rich';
+            if (/^elements\.steps\.\d+\.actions\.\d+\.text$/.test(path)) return 'rich';
+            if (/^elements\.steps\.\d+\.title$/.test(path)) return 'plain';
+            if (/^elements\.timeline\.\d+$/.test(path)) return 'timeline';
+            return 'select';
+        }
+
+        let editingEl = null, editingPath = null, editingKind = null;
+        let editTimer = null, pendingRender = null;
+        const toolbar = document.getElementById('ig-toolbar');
+
+        // Sérialise un contenu édité vers le format du modèle :
+        // balises de la liste blanche conservées (avec style filtré),
+        // <br> et blocs -> \n, texte échappé (chevrons uniquement).
+        function serializeRich(root) {
+            function walk(node) {
+                let out = '';
+                node.childNodes.forEach(n => {
+                    if (n.nodeType === 3) {
+                        out += n.textContent.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        return;
+                    }
+                    if (n.nodeType !== 1) return;
+                    const tag = n.tagName;
+                    if (tag === 'BR') { out += '\n'; return; }
+                    if (tag === 'DIV' || tag === 'P') {
+                        // Blocs générés par contenteditable -> saut de ligne
+                        if (out && !out.endsWith('\n')) out += '\n';
+                        out += walk(n);
+                        return;
+                    }
+                    if (tag === 'INPUT') {
+                        const t = (n.getAttribute('type') || '').toLowerCase();
+                        if (t === 'checkbox') out += `<input type="checkbox"${n.checked ? ' checked="checked"' : ''} />`;
+                        return;
+                    }
+                    if (ALLOWED_RENDER_TAGS[tag]) {
+                        const low = tag.toLowerCase();
+                        let attrs = '';
+                        if ((ALLOWED_RENDER_TAGS[tag] || []).includes('style')) {
+                            const st = sanitizeRenderStyle(n.getAttribute('style') || '');
+                            if (st) attrs = ` style="${st}"`;
+                        }
+                        out += `<${low}${attrs}>` + walk(n) + `</${low}>`;
+                    } else {
+                        out += walk(n); // balise inconnue : on garde le contenu
+                    }
+                });
+                return out;
+            }
+            return walk(root).replace(/\u00a0/g, ' ').replace(/\n+$/, '');
+        }
+
+        function currentEditValue() {
+            if (editingKind === 'plain') {
+                return editingEl.textContent.replace(/\s*\n\s*/g, ' ').trim();
+            }
+            return serializeRich(editingEl);
+        }
+
+        function valuePathOf(path, kind) {
+            return kind === 'timeline' ? path + '.text' : path;
+        }
+
+        function sendEdit() {
+            if (!editingEl) return;
+            window.parent.postMessage({
+                type: 'ig-edit',
+                path: valuePathOf(editingPath, editingKind),
+                value: currentEditValue()
+            }, '*');
+        }
+
+        function positionToolbar() {
+            if (!editingEl) return;
+            const r = editingEl.getBoundingClientRect();
+            toolbar.style.display = 'flex';
+            const top = Math.max(6, r.top - 44);
+            let left = r.left + r.width / 2 - toolbar.offsetWidth / 2;
+            left = Math.max(6, Math.min(left, window.innerWidth - toolbar.offsetWidth - 6));
+            toolbar.style.top = top + 'px';
+            toolbar.style.left = left + 'px';
+        }
+
+        function startInlineEdit(el, path, kind, x, y) {
+            stopInlineEdit(true);
+            editingEl = el; editingPath = path; editingKind = kind;
+            el.setAttribute('contenteditable', 'true');
+            el.classList.add('ig-editing');
+            el.focus();
+            // Placer le curseur au point cliqué
+            try {
+                const range = document.caretRangeFromPoint
+                    ? document.caretRangeFromPoint(x, y)
+                    : (document.caretPositionFromPoint
+                        ? (() => { const p = document.caretPositionFromPoint(x, y);
+                                   const r = document.createRange(); r.setStart(p.offsetNode, p.offset); return r; })()
+                        : null);
+                if (range) { const s = getSelection(); s.removeAllRanges(); s.addRange(range); }
+            } catch (e) {}
+            window.parent.postMessage({ type: 'ig-edit-start', path: editingPath }, '*');
+            if (kind === 'rich') positionToolbar();
+        }
+
+        function stopInlineEdit(sendFinal) {
+            if (!editingEl) return;
+            if (sendFinal) sendEdit();
+            clearTimeout(editTimer);
+            editingEl.removeAttribute('contenteditable');
+            editingEl.classList.remove('ig-editing');
+            editingEl = null; editingPath = null; editingKind = null;
+            toolbar.style.display = 'none';
+            window.parent.postMessage({ type: 'ig-edit-end' }, '*');
+            // Un rendu reçu pendant l'édition a été différé : l'appliquer
+            if (pendingRender) {
+                const msg = pendingRender; pendingRender = null;
+                currentProject = msg.project;
+                if (msg.orientation) orientation = msg.orientation;
+                try { render(); } catch (e) { console.error('render:', e); }
+            }
+        }
+
+        if (frameMode) {
+            // Barre de style : execCommand s'applique à la sélection courante
+            toolbar.addEventListener('mousedown', (ev) => ev.preventDefault());
+            toolbar.addEventListener('click', (ev) => {
+                const btn = ev.target.closest('button[data-cmd]');
+                if (!btn || !editingEl) return;
+                document.execCommand(btn.dataset.cmd, false, null);
+                clearTimeout(editTimer);
+                editTimer = setTimeout(sendEdit, 200);
+            });
+
+            // Frappe : envoi débouncé vers l'éditeur (le modèle suit en direct)
+            document.addEventListener('input', (ev) => {
+                if (!editingEl || ev.target !== editingEl) return;
+                clearTimeout(editTimer);
+                editTimer = setTimeout(sendEdit, 200);
+                if (editingKind === 'rich') positionToolbar();
+            });
+
+            document.addEventListener('keydown', (ev) => {
+                if (!editingEl) return;
+                // Fin d'édition directe (ne pas dépendre de focusout : blur()
+                // programmatique ne le déclenche pas toujours, notamment quand
+                // la fenêtre n'a pas le focus).
+                if (ev.key === 'Escape') { ev.preventDefault(); stopInlineEdit(true); return; }
+                if (ev.key === 'Enter') {
+                    ev.preventDefault();
+                    if (editingKind === 'rich') {
+                        document.execCommand('insertHTML', false, '<br>');
+                    } else {
+                        stopInlineEdit(true); // champs mono-ligne
+                    }
+                }
+            }, true);
+
+            // Collage en texte brut (pas de HTML étranger dans le modèle)
+            document.addEventListener('paste', (ev) => {
+                if (!editingEl) return;
+                ev.preventDefault();
+                const text = (ev.clipboardData || window.clipboardData).getData('text/plain');
+                document.execCommand('insertText', false, text);
+            }, true);
+
+            document.addEventListener('focusout', (ev) => {
+                if (editingEl && ev.target === editingEl) {
+                    // Laisser passer les clics sur la toolbar (mousedown préventé)
+                    setTimeout(() => { if (editingEl && document.activeElement !== editingEl) stopInlineEdit(true); }, 0);
+                }
+            });
+
+            window.addEventListener('message', (ev) => {
+                const msg = ev.data;
+                if (!msg || typeof msg !== 'object') return;
+                if (msg.type === 'ig-render' && msg.project) {
+                    if (editingEl) { pendingRender = msg; return; } // ne pas casser la frappe
+                    currentProject = msg.project;
+                    if (msg.orientation) orientation = msg.orientation;
+                    try { render(); } catch (e) { console.error('render:', e); }
+                } else if (msg.type === 'ig-select-path') {
+                    stopInlineEdit(true);
+                    selectedPath = msg.path || null;
+                    document.querySelectorAll('.ig-selected').forEach(el => el.classList.remove('ig-selected'));
+                    restoreSelection();
+                }
+            });
+
+            document.addEventListener('click', (ev) => {
+                if (ev.target.closest('#ig-toolbar')) return;
+                const target = ev.target.closest('[data-edit]');
+                if (editingEl && target === editingEl) return; // clic dans le champ en cours
+                if (editingEl) stopInlineEdit(true);
+                if (!target) return;
+                ev.preventDefault();
+                selectedPath = target.getAttribute('data-edit');
+                document.querySelectorAll('.ig-selected').forEach(el => el.classList.remove('ig-selected'));
+                target.classList.add('ig-selected');
+                window.parent.postMessage({ type: 'ig-select', path: selectedPath }, '*');
+
+                // Édition directe pour les natures textuelles
+                const kind = pathKind(selectedPath);
+                if (kind === 'rich' || kind === 'plain') {
+                    startInlineEdit(target, selectedPath, kind, ev.clientX, ev.clientY);
+                } else if (kind === 'timeline') {
+                    const ti = parseInt(selectedPath.split('.')[2], 10);
+                    const item = currentProject && currentProject.elements.timeline[ti];
+                    if (item && item.type === 'item') {
+                        startInlineEdit(target, selectedPath, 'timeline', ev.clientX, ev.clientY);
+                    }
+                }
+            });
+
+            window.parent.postMessage({ type: 'ig-ready' }, '*');
+        }
+
+        /* ==========================================================================
+           DÉMARRAGE (modes capture et fichier autonome)
+           ========================================================================== */
+        if (!frameMode) {
+            try {
+                render();
+            } catch (e) {
+                document.getElementById('render-root').innerHTML =
+                    '<div style="padding:40px;color:red;">RENDER ERROR: ' + esc(e.message) + '</div>';
+            }
+            waitForImages(5000).then(() => {
+                applyFit();
+                // Double rAF : garantit un layout stabilisé avant le signal.
+                requestAnimationFrame(() => requestAnimationFrame(signalReady));
+            });
+            window.addEventListener('resize', applyFit);
+        }
     </script>
 </body>
 </html>

@@ -20,7 +20,9 @@ import (
 	"infographic-generator/internal/server"
 )
 
-const version = "2.0.0"
+// version est injectée au build via -ldflags "-X main.version=..." ;
+// la valeur ci-dessous sert de repli pour un build sans script (go build / go run).
+var version = "2.1.0"
 
 type lockInfo struct {
 	PID  int    `json:"pid"`
@@ -34,6 +36,7 @@ func main() {
 	noKiosk := flag.Bool("no-kiosk", false, "Ne pas ouvrir le navigateur en mode application")
 	noBrowser := flag.Bool("no-browser", false, "Ne pas ouvrir le navigateur du tout")
 	showVersion := flag.Bool("version", false, "Afficher la version")
+	browserPath := flag.String("browser", "", "Chemin explicite du navigateur Chromium (Chrome/Edge/Brave...) ; sinon detection automatique")
 	flag.Parse()
 
 	if *showVersion {
@@ -80,8 +83,12 @@ func main() {
 	}
 
 	br := browser.Detect()
+	if *browserPath != "" {
+		// Choix explicite de l'utilisateur : prioritaire sur la detection.
+		br = browser.FromPath(*browserPath)
+	}
 	if br.Path != "" {
-		log.Printf("Navigateur: %s", br.Name)
+		log.Printf("Navigateur: %s (%s)", br.Name, br.Path)
 	} else {
 		log.Println("ATTENTION: Aucun navigateur Chromium detecte.")
 	}
@@ -139,25 +146,47 @@ func main() {
 	useKiosk := !*noBrowser && !*noKiosk && br.Path != ""
 
 	if useKiosk {
-		// Kiosk mode: browser close = server shutdown
+		// Le kiosk est lancé mais la fin de son processus n'est PAS un
+		// signal de fermeture fiable : Edge (Startup Boost) délègue parfois
+		// à un processus frère et notre cmd se termine immédiatement alors
+		// que la fenêtre est bien ouverte. Le cycle de vie est donc piloté
+		// par le battement de coeur de la page (voir plus bas).
 		go func() {
-			freshProfile := browser.OpenKioskAndWait(br.Path, baseURL, dd)
-
-			if freshProfile {
-				// First launch: Edge/Chromium restarts itself during profile init,
-				// causing cmd.Wait() to return prematurely. This is NOT a real close.
-				// The browser is still running — do NOT shutdown the server.
-				log.Println("Premier lancement detecte: fermeture prematuree du navigateur ignoree.")
-				return
-			}
-
-			select {
-			case shutdownCh <- "browser-closed":
-			default:
-			}
+			browser.OpenKioskAndWait(br.Path, baseURL, dd)
+			log.Println("Processus kiosk termine (informatif ; la fermeture est pilotee par le heartbeat).")
 		}()
 	} else if !*noBrowser {
 		browser.OpenURL(baseURL)
+	}
+
+	// ============================================
+	// VEILLE D'INACTIVITE (fermeture de la fenetre)
+	// ============================================
+	// L'éditeur envoie un battement toutes les 3 s. Après un premier
+	// battement, 15 s de silence = plus aucune fenêtre ouverte -> extinction.
+	// Sans navigateur (-no-browser), le serveur vit indéfiniment.
+	if !*noBrowser {
+		go func() {
+			const silence = 15 * time.Second
+			seen := false
+			t := time.NewTicker(2 * time.Second)
+			defer t.Stop()
+			for range t.C {
+				last := srv.LastHeartbeat()
+				if last.IsZero() {
+					continue // fenêtre jamais ouverte : on n'éteint pas
+				}
+				seen = true
+				if seen && time.Since(last) > silence {
+					log.Println("Aucun battement de l'interface depuis 15s: fenetre fermee, extinction.")
+					select {
+					case shutdownCh <- "fenetre-fermee":
+					default:
+					}
+					return
+				}
+			}
+		}()
 	}
 
 	// ============================================

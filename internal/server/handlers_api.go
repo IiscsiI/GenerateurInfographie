@@ -1,10 +1,12 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -111,10 +113,24 @@ func (s *Server) handleDuplicateProject(w http.ResponseWriter, r *http.Request) 
 
 // --- Assets ---
 
+// allowedAssetExts : seules les images matricielles sûres sont acceptées.
+// SVG volontairement exclu : c'est un format scriptable — un SVG malveillant
+// resservi depuis l'origine de l'éditeur serait un XSS stocké contournant
+// toute la sanitisation HTML.
+var allowedAssetExts = map[string]bool{
+	".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".webp": true,
+}
+
 func (s *Server) handleUploadAsset(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
-	r.ParseMultipartForm(10 << 20) // 10 MB max
+	// Limite dure sur le corps de la requête (l'ancien ParseMultipartForm
+	// ne plafonnait que la partie gardée en mémoire, pas la taille reçue).
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20) // 10 Mo
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		s.jsonError(w, 413, "Fichier trop volumineux (10 Mo max)")
+		return
+	}
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		s.jsonError(w, 400, "Fichier manquant")
@@ -122,7 +138,28 @@ func (s *Server) handleUploadAsset(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	url, err := s.store.SaveAsset(id, header.Filename, file)
+	// 1. Contrôle de l'extension (liste blanche)
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	if !allowedAssetExts[ext] {
+		s.jsonError(w, 400, "Format non autorise (png, jpg, jpeg, gif, webp)")
+		return
+	}
+
+	// 2. Contrôle du contenu réel (magic bytes) : l'extension ne suffit pas,
+	// un fichier HTML renommé en .png doit être rejeté.
+	head := make([]byte, 512)
+	n, _ := io.ReadFull(file, head)
+	head = head[:n]
+	contentType := http.DetectContentType(head)
+	if !strings.HasPrefix(contentType, "image/") {
+		s.jsonError(w, 400, "Le contenu du fichier n'est pas une image valide")
+		return
+	}
+
+	// Réassembler le flux complet (en-tête déjà lu + reste)
+	reader := io.MultiReader(bytes.NewReader(head), file)
+
+	url, err := s.store.SaveAsset(id, header.Filename, reader)
 	if err != nil {
 		s.jsonError(w, 500, "Erreur upload")
 		return
@@ -134,6 +171,13 @@ func (s *Server) handleUploadAsset(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleGetAsset(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	filename := r.PathValue("filename")
+
+	// Même liste blanche qu'à l'upload : un fichier déposé sur disque par un
+	// autre canal ne doit pas devenir servable pour autant.
+	if !allowedAssetExts[strings.ToLower(filepath.Ext(filename))] {
+		http.Error(w, "Format non autorise", http.StatusForbidden)
+		return
+	}
 
 	path := s.store.GetAssetPath(id, filename)
 	http.ServeFile(w, r, path)

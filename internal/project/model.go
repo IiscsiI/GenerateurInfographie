@@ -102,7 +102,7 @@ type Action struct {
 func DefaultProject() Project {
 	return Project{
 		Version:   "4.0",
-		Generator: "Generateur Infographie v2.0 (Go)",
+		Generator: "Generateur Infographie v2.1 (Go)",
 		Metadata: Metadata{
 			Name:    "Nouveau Projet",
 			Author:  "",
